@@ -153,6 +153,29 @@ h1,h2,h3,h4,h5{font-family:'Syne',sans-serif}button{cursor:pointer;font-family:'
 .dpj:hover{border-color:var(--border2);transform:translateX(2px)}
 .dpjt{font-weight:600;font-size:.85rem;margin-bottom:4px}.dpjm{font-size:.72rem;color:var(--text3)}
 @media(max-width:768px){#roster{display:none}.fg{grid-template-columns:1fr}.fgr.full{grid-column:1}#stats-bar{gap:7px}.stc-v{font-size:1.2rem}.hdr-t{font-size:1.1rem}.nav-l{min-width:100px;font-size:.78rem}}
+#pmo{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1002;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+#pmo.open{display:flex}
+#pmdl{background:var(--card);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;animation:slideUp .25s ease;box-shadow:var(--shl)}
+#pmdl .mh{border-radius:14px 14px 0 0}
+.paste-area{background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:12px;font-size:.82rem;color:var(--text);width:100%;min-height:140px;resize:vertical;line-height:1.6;transition:all var(--t)}
+.paste-area:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(245,166,35,.1)}
+.paste-area::placeholder{color:var(--text3)}
+.parse-btn{margin-top:10px;width:100%}
+#parse-preview{margin-top:16px;display:none}
+.preview-table{width:100%;border-collapse:collapse;font-size:.78rem}
+.preview-table th{background:var(--card2);color:var(--text3);font-size:.68rem;text-transform:uppercase;letter-spacing:.6px;padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.preview-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.preview-table tr:hover td{background:var(--card2)}
+.preview-table input.pi{background:transparent;border:none;color:var(--text);font-size:.78rem;width:100%;padding:2px 4px;border-radius:3px}
+.preview-table input.pi:focus{background:var(--card2);outline:1px solid var(--amber)}
+.preview-table select.ps{background:transparent;border:none;color:var(--text2);font-size:.72rem;cursor:pointer;appearance:none;-webkit-appearance:none;padding:2px 4px}
+.preview-table select.ps:focus{background:var(--card2);outline:1px solid var(--amber);border-radius:3px}
+.row-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:.9rem;padding:2px 5px;border-radius:3px;transition:all var(--t)}
+.row-del:hover{color:var(--red);background:var(--redd)}
+.parse-hint{font-size:.75rem;color:var(--text3);margin-top:8px;line-height:1.5}
+.parse-hint span{color:var(--amber)}
+.preview-count{font-size:.8rem;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.preview-count strong{color:var(--green);font-family:'Syne',sans-serif}
 </style>
 </head>
 <body>
@@ -166,6 +189,7 @@ h1,h2,h3,h4,h5{font-family:'Syne',sans-serif}button{cursor:pointer;font-family:'
       </div>
       <div class="hdr-actions">
         <button class="btn btn-g btn-sm" id="btn-exp" title="Export CSV">⬇ Export</button>
+        <button class="btn btn-g btn-sm" id="btn-paste" title="Paste Schedule">📋 Paste Schedule</button>
         <button class="btn btn-p" id="btn-new" title="New Job (N)">＋ New Job</button>
       </div>
     </div>
@@ -250,6 +274,43 @@ h1,h2,h3,h4,h5{font-family:'Syne',sans-serif}button{cursor:pointer;font-family:'
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
         <button class="btn btn-g" id="vm-cancel">Cancel</button>
         <button class="btn btn-p" id="vm-save">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Paste Schedule Modal -->
+<div id="pmo">
+  <div id="pmdl">
+    <div class="mh"><h3 class="mt">📋 Paste Schedule</h3><button class="mx" id="pmo-close">✕</button></div>
+    <div class="mb">
+      <div class="parse-hint">Paste any schedule text — one game per line. Supports formats like:<br>
+        <span>Tuesday, 2/24 - 4pm - vs Gonzaga</span> &nbsp;·&nbsp; <span>Friday 4/24 - 4:30pm vs SSSA</span> &nbsp;·&nbsp; <span>3/15 at 6pm at Good Counsel</span>
+      </div>
+      <div class="fgr" style="margin-top:12px">
+        <label class="fl">Team (applied to all imported jobs)</label>
+        <input class="fi" id="p-team" placeholder="e.g. Boys Varsity (optional)">
+      </div>
+      <div class="fgr" style="margin-top:10px">
+        <label class="fl">Year (if not in text)</label>
+        <input class="fi" id="p-year" placeholder="e.g. 2025" style="max-width:120px">
+      </div>
+      <textarea class="paste-area" id="paste-input" placeholder="Paste schedule here...&#10;&#10;Tuesday, 2/24 - 4pm - vs Gonzaga&#10;Friday, 2/27 - 4:45pm - vs Washington &amp; Liberty&#10;Saturday, 2/28 - 11am at St Christopher's" style="margin-top:12px"></textarea>
+      <button class="btn btn-p parse-btn" id="btn-parse">🔍 Parse Schedule</button>
+      <div id="parse-preview">
+        <div class="preview-count"><strong id="parse-count">0</strong> games detected — review &amp; edit before importing:</div>
+        <div style="overflow-x:auto">
+          <table class="preview-table">
+            <thead><tr><th>Title / Opponent</th><th>Date</th><th>Time</th><th>End Time</th><th>Type</th><th></th></tr></thead>
+            <tbody id="parse-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <span style="font-size:.75rem;color:var(--text3)" id="import-status"></span>
+      <div class="mf-r">
+        <button class="btn btn-g" id="pmo-cancel">Cancel</button>
+        <button class="btn btn-p" id="btn-import" style="display:none">⬇ Import All Jobs</button>
       </div>
     </div>
   </div>
@@ -696,6 +757,139 @@ function exportCSV(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='lax_jobs_export.csv';a.click();
 }
 
+/* ===== PASTE SCHEDULE PARSER ===== */
+function openPasteModal(){
+  $('paste-input').value='';
+  $('p-team').value='';
+  $('p-year').value=new Date().getFullYear();
+  $('parse-preview').style.display='none';
+  $('btn-import').style.display='none';
+  $('import-status').textContent='';
+  $('parse-tbody').innerHTML='';
+  $('pmo').classList.add('open');
+  setTimeout(()=>$('paste-input').focus(),100);
+}
+function closePasteModal(){$('pmo').classList.remove('open')}
+
+function parseTime(raw){
+  if(!raw)return{start:'09:00',end:'11:00'};
+  raw=raw.trim().toLowerCase();
+  const m=raw.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+  if(!m)return{start:'09:00',end:'11:00'};
+  let h=parseInt(m[1]),min=parseInt(m[2]||0);
+  const ap=m[3]?m[3].toLowerCase():'';
+  if(ap==='pm'&&h!==12)h+=12;
+  if(ap==='am'&&h===12)h=0;
+  if(!ap&&h<6)h+=12;
+  const start=pad2(h)+':'+pad2(min);
+  const endH=h+2;
+  const end=pad2(endH>23?23:endH)+':'+pad2(min);
+  return{start,end};
+}
+
+function parseScheduleLine(line, fallbackYear){
+  line=line.replace(/^[-•*]\s*/,'').trim();
+  if(!line||line.length<5)return null;
+
+  // Extract date: look for M/D or M-D patterns
+  const dateRx=/\b(\d{1,2})[\/\-](\d{1,2})\b/;
+  const dateM=line.match(dateRx);
+  if(!dateM)return null;
+  const month=parseInt(dateM[1]),day=parseInt(dateM[2]);
+  if(month<1||month>12||day<1||day>31)return null;
+  const year=parseInt(fallbackYear)||new Date().getFullYear();
+  const dateVal=year+'-'+pad2(month)+'-'+pad2(day);
+
+  // Extract time
+  const timeRx=/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm))/i;
+  const timeM=line.match(timeRx);
+  const {start,end}=parseTime(timeM?timeM[1]:'');
+
+  // Extract title: everything after the date/time info
+  let title=line;
+  // Remove day-of-week prefix
+  title=title.replace(/^(monday|tuesday|wednesday|thursday|friday|saturday|sunday),?\s*/i,'');
+  // Remove date portion
+  title=title.replace(dateRx,'');
+  // Remove time portion
+  title=title.replace(/[-–]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*/i,'');
+  title=title.replace(/\bat\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*/i,'');
+  // Remove leading dashes/spaces
+  title=title.replace(/^[-–\s,]+/,'').replace(/[-–\s,]+$/,'').trim();
+  // Capitalize first letter
+  if(title) title=title.charAt(0).toUpperCase()+title.slice(1);
+  if(!title) title='Game '+fmtDate(dateVal);
+
+  return{title,date:dateVal,startTime:start,endTime:end,type:'Game Coverage'};
+}
+
+function parseSchedule(){
+  const raw=$('paste-input').value;
+  const year=$('p-year').value||new Date().getFullYear();
+  const lines=raw.split('\n');
+  const results=[];
+  lines.forEach(line=>{
+    const r=parseScheduleLine(line,year);
+    if(r)results.push(r);
+  });
+  const tbody=$('parse-tbody');
+  if(!results.length){
+    tbody.innerHTML='<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:20px">No dates detected. Make sure each line has a date like 2/24 or 3/15.</td></tr>';
+    $('parse-preview').style.display='block';
+    $('btn-import').style.display='none';
+    $('parse-count').textContent='0';
+    return;
+  }
+  $('parse-count').textContent=results.length;
+  let rows='';
+  results.forEach((r,i)=>{
+    rows+=`<tr data-idx="${i}">
+      <td><input class="pi" data-field="title" value="${r.title.replace(/"/g,'&quot;')}" style="min-width:160px"></td>
+      <td><input class="pi" data-field="date" type="date" value="${r.date}" style="min-width:110px"></td>
+      <td><input class="pi" data-field="startTime" type="time" value="${r.startTime}"></td>
+      <td><input class="pi" data-field="endTime" type="time" value="${r.endTime}"></td>
+      <td><select class="ps" data-field="type"><option${r.type==='Game Coverage'?' selected':''}>Game Coverage</option><option${r.type==='Event'?' selected':''}>Event</option><option${r.type==='Tournament'?' selected':''}>Tournament</option><option${r.type==='Highlight Reel'?' selected':''}>Highlight Reel</option><option${r.type==='Other'?' selected':''}>Other</option></select></td>
+      <td><button class="row-del" data-idx="${i}" title="Remove">✕</button></td>
+    </tr>`;
+  });
+  tbody.innerHTML=rows;
+  tbody.querySelectorAll('.row-del').forEach(btn=>btn.addEventListener('click',()=>{
+    btn.closest('tr').remove();
+    const remaining=tbody.querySelectorAll('tr').length;
+    $('parse-count').textContent=remaining;
+    if(!remaining){$('btn-import').style.display='none';}
+  }));
+  $('parse-preview').style.display='block';
+  $('btn-import').style.display='inline-flex';
+  $('import-status').textContent='';
+}
+
+function importParsed(){
+  const team=$('p-team').value.trim();
+  const rows=$('parse-tbody').querySelectorAll('tr');
+  let count=0;
+  rows.forEach(row=>{
+    const get=f=>row.querySelector('[data-field="'+f+'"]').value;
+    const title=get('title').trim();
+    const date=get('date');
+    if(!title||!date)return;
+    S.jobs.push({
+      id:uid(),title,date,
+      startTime:get('startTime'),endTime:get('endTime'),
+      type:get('type'),team:team,
+      assignedVideographer:'Unassigned',
+      status:'Needs Coverage',
+      payAmount:0,notes:'',colorTag:''
+    });
+    count++;
+  });
+  saveState();
+  $('import-status').textContent='✓ '+count+' jobs imported!';
+  $('import-status').style.color='var(--green)';
+  $('btn-import').style.display='none';
+  setTimeout(()=>{closePasteModal();renderAll();},900);
+}
+
 function navigate(dir){
   const d=S.currentDate;
   if(S.view==='month') d.setMonth(d.getMonth()+dir);
@@ -759,6 +953,14 @@ function init(){
 
   // Export
   $('btn-exp').addEventListener('click',exportCSV);
+
+  // Paste Schedule
+  $('btn-paste').addEventListener('click',openPasteModal);
+  $('pmo-close').addEventListener('click',closePasteModal);
+  $('pmo-cancel').addEventListener('click',closePasteModal);
+  $('pmo').addEventListener('click',e=>{if(e.target===$('pmo'))closePasteModal()});
+  $('btn-parse').addEventListener('click',parseSchedule);
+  $('btn-import').addEventListener('click',importParsed);
 
   // Keyboard shortcuts
   document.addEventListener('keydown',e=>{

@@ -1116,10 +1116,12 @@ function importParsed(){
     const status=statusEl?statusEl.value:(AVAIL_STATUS_MAP[avail]||'Needs Coverage');
     const notes=AVAIL_NOTE_MAP[avail]||'';
     const colorTag=row.dataset.color||'';
+    const typeEl=get('type');
+    const type=typeEl?typeEl.value:'Game Coverage';
     S.jobs.push({
       id:uid(),title,date,
       startTime:get('startTime').value,endTime:get('endTime').value,
-      type:get('type').value,team:team,
+      type,team:team,
       assignedVideographer:'Unassigned',
       status,
       payAmount:0,notes,colorTag

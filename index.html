@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LAX Portal — Videographer Job Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0f1117;--card:#171b24;--card2:#1e2330;--border:#252c3a;--border2:#2e3748;--text:#cdd6e8;--text2:#7e8fa8;--text3:#4a5568;--amber:#89b4fa;--amberd:rgba(137,180,250,.12);--red:#f38ba8;--redd:rgba(243,139,168,.15);--teal:#89dceb;--blue:#89b4fa;--blued:rgba(137,180,250,.12);--green:#a6e3a1;--greend:rgba(166,227,161,.12);--purple:#cba6f7;--gray:#45475a;--accent:#89b4fa;--accentd:rgba(137,180,250,.12);--r:10px;--rs:6px;--sh:0 4px 24px rgba(0,0,0,.5);--shl:0 8px 40px rgba(0,0,0,.7);--t:.22s cubic-bezier(.4,0,.2,1)}
@@ -1226,20 +1226,24 @@ function goToday(){S.currentDate=new Date();renderAll()}
 
 /* ===== INIT ===== */
 async function init(){
-  // Init Supabase after DOM/scripts are ready
+  // Render immediately so the app is usable
+  renderAll();
+
+  // Init Supabase in background
   try{
     if(window.supabase && typeof window.supabase.createClient === 'function'){
       supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-      console.log('Supabase connected');
+      console.log('Supabase client created');
+      // Load with 5s timeout
+      const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('Supabase load timeout')),5000));
+      await Promise.race([loadState(),timeout]);
+      console.log('Supabase data loaded:',S.jobs.length,'jobs,',S.videographers.length,'videographers');
+      renderAll();
     } else {
       console.warn('Supabase SDK not loaded, running in offline mode');
     }
-  }catch(e){console.error('Supabase init failed:',e);}
+  }catch(e){console.error('Supabase error (app still works):',e);}
 
-  try{ await loadState(); }catch(e){console.error('loadState failed:',e);}
-
-  // Film strip
-  renderAll();
 
   // View tabs
   document.querySelectorAll('.vtab').forEach(t=>t.addEventListener('click',()=>{

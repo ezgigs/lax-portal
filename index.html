@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LAX Portal — Videographer Job Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0f1117;--card:#171b24;--card2:#1e2330;--border:#252c3a;--border2:#2e3748;--text:#cdd6e8;--text2:#7e8fa8;--text3:#4a5568;--amber:#89b4fa;--amberd:rgba(137,180,250,.12);--red:#f38ba8;--redd:rgba(243,139,168,.15);--teal:#89dceb;--blue:#89b4fa;--blued:rgba(137,180,250,.12);--green:#a6e3a1;--greend:rgba(166,227,161,.12);--purple:#cba6f7;--gray:#45475a;--accent:#89b4fa;--accentd:rgba(137,180,250,.12);--r:10px;--rs:6px;--sh:0 4px 24px rgba(0,0,0,.5);--shl:0 8px 40px rgba(0,0,0,.7);--t:.22s cubic-bezier(.4,0,.2,1)}
@@ -453,28 +454,71 @@ let S = {
   notifications:[]
 };
 
-const STATE_VERSION='v3';
-function loadState(){
+/* ===== SUPABASE ===== */
+const SUPABASE_URL='https://vxejfbsuwuojghyckmus.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4ZWpmYnN1d3VvamdoeWNrbXVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MzczOTcsImV4cCI6MjA4NzExMzM5N30.kiXFHTXIrBKsy75mEs2xbDlUU0_WYbifigVElweHU3s';
+const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+async function loadState(){
   try{
-    const d=localStorage.getItem('lax_portal_state');
-    if(d){
-      const p=JSON.parse(d);
-      if(p.version!==STATE_VERSION){localStorage.removeItem('lax_portal_state');return false;}
-      S.jobs=p.jobs||[];S.videographers=p.videographers||[];S.notifications=p.notifications||[];return true;
-    }
-  }catch(e){}
-  return false;
+    const [jobsRes,vgRes,notifRes]=await Promise.all([
+      supabase.from('jobs').select('*').order('date',{ascending:true}),
+      supabase.from('videographers').select('*'),
+      supabase.from('notifications').select('*').order('time',{ascending:false}).limit(50)
+    ]);
+    if(jobsRes.data) S.jobs=jobsRes.data.map(j=>({
+      id:j.id,title:j.title,date:j.date,startTime:j.start_time,endTime:j.end_time,
+      type:j.type,team:j.team,assignedVideographer:j.assigned_videographer,
+      status:j.status,payAmount:j.pay_amount,notes:j.notes,colorTag:j.color_tag
+    }));
+    if(vgRes.data) S.videographers=vgRes.data;
+    if(notifRes.data) S.notifications=notifRes.data.map(n=>({
+      id:n.id,jobTitle:n.job_title,note:n.note,vg:n.vg,time:n.time,read:n.read
+    }));
+    return true;
+  }catch(e){console.error('Load error:',e);return false;}
 }
-function saveState(){
-  localStorage.setItem('lax_portal_state',JSON.stringify({version:STATE_VERSION,jobs:S.jobs,videographers:S.videographers,notifications:S.notifications}));
+
+async function saveJob(jobData){
+  const row={
+    id:jobData.id,title:jobData.title,date:jobData.date,
+    start_time:jobData.startTime,end_time:jobData.endTime,
+    type:jobData.type,team:jobData.team,
+    assigned_videographer:jobData.assignedVideographer,
+    status:jobData.status,pay_amount:jobData.payAmount,
+    notes:jobData.notes,color_tag:jobData.colorTag
+  };
+  await supabase.from('jobs').upsert(row);
+}
+
+async function deleteJobFromDB(id){
+  await supabase.from('jobs').delete().eq('id',id);
+}
+
+async function saveVideographer(vg){
+  await supabase.from('videographers').upsert(vg);
+}
+
+async function saveNotification(n){
+  await supabase.from('notifications').upsert({
+    id:n.id,job_title:n.jobTitle,note:n.note,vg:n.vg,time:n.time,read:n.read
+  });
+}
+
+async function clearAllJobs(){
+  await supabase.from('jobs').delete().neq('id','__none__');
+}
+
+async function clearAllNotifications(){
+  await supabase.from('notifications').delete().neq('id','__none__');
 }
 
 /* ===== NOTIFICATIONS ===== */
-function addNotification(jobTitle, note, vg){
+async function addNotification(jobTitle, note, vg){
   const n={id:uid(),jobTitle,note,vg:vg||'',time:Date.now(),read:false};
   S.notifications.unshift(n);
   if(S.notifications.length>50) S.notifications=S.notifications.slice(0,50);
-  saveState();
+  await saveNotification(n);
   renderNotifBadge();
 }
 function renderNotifBadge(){
@@ -499,29 +543,29 @@ function renderNotifPanel(){
       <div class="notif-meta"><span>${n.vg||'Unknown'}</span><span>${timeAgo(n.time)}</span></div>
     </div>`).join('');
   body.querySelectorAll('.notif-item').forEach(el=>{
-    el.addEventListener('click',()=>{
+    el.addEventListener('click',async()=>{
       const n=S.notifications.find(x=>x.id===el.dataset.nid);
-      if(n&&!n.read){n.read=true;saveState();renderNotifBadge();el.classList.replace('unread','read');}
+      if(n&&!n.read){n.read=true;await saveNotification(n);renderNotifBadge();el.classList.replace('unread','read');}
     });
   });
 }
-function openNotifPanel(){
+async function openNotifPanel(){
   $('notif-panel').classList.add('open');
   renderNotifPanel();
   S.notifications.forEach(n=>n.read=true);
-  saveState();
+  for(const n of S.notifications){await saveNotification(n);}
   renderNotifBadge();
 }
 function closeNotifPanel(){$('notif-panel').classList.remove('open');}
-function resetCalendar(){
+async function resetCalendar(){
   if(!confirm('Clear ALL jobs from the calendar? This cannot be undone.'))return;
-  S.jobs=[];saveState();renderAll();
+  await clearAllJobs();
+  S.jobs=[];renderAll();
 }
 
 function initSampleData(){
   S.videographers=[];
   S.jobs=[];
-  saveState();
 }
 
 function getFilteredJobs(){
@@ -779,7 +823,7 @@ function clearFormErrors(){
   document.querySelectorAll('.ferr').forEach(e=>e.classList.remove('show'));
 }
 
-function saveJob(){
+async function saveJobModal(){
   clearFormErrors();let valid=true;
   const title=$('m-title').value.trim();
   const date=$('m-date').value;
@@ -796,27 +840,32 @@ function saveJob(){
     notes:$('m-notes').value.trim(),
     colorTag:''
   };
+  let jobData;
   if(S.editingJobId){
     const idx=S.jobs.findIndex(j=>j.id===S.editingJobId);
     if(idx>=0){
       const prev=S.jobs[idx];
       if(data.notes&&data.notes!==prev.notes){
-        addNotification(data.title||prev.title,data.notes,data.assignedVideographer||prev.assignedVideographer);
+        await addNotification(data.title||prev.title,data.notes,data.assignedVideographer||prev.assignedVideographer);
       }
-      S.jobs[idx]={...prev,...data};
+      jobData={...prev,...data};
+      S.jobs[idx]=jobData;
     }
   } else {
-    if(data.notes) addNotification(data.title,data.notes,data.assignedVideographer);
-    S.jobs.push({id:uid(),...data});
+    if(data.notes) await addNotification(data.title,data.notes,data.assignedVideographer);
+    jobData={id:uid(),...data};
+    S.jobs.push(jobData);
   }
-  saveState();closeModal();renderAll();
+  await saveJob(jobData);
+  closeModal();renderAll();
 }
 
-function deleteJob(){
+async function deleteJob(){
   if(!S.editingJobId)return;
   if(!confirm('Delete this job?'))return;
+  await deleteJobFromDB(S.editingJobId);
   S.jobs=S.jobs.filter(j=>j.id!==S.editingJobId);
-  saveState();closeModal();renderAll();
+  closeModal();renderAll();
 }
 
 function openDayPanel(ds){
@@ -857,13 +906,15 @@ function openVgModal(){
 
 function closeVgModal(){$('vmo').classList.remove('open')}
 
-function saveVg(){
+async function saveVg(){
   const name=$('vm-name').value.trim();
   if(!name){$('ve-name').classList.add('show');return}
   const selColor=document.querySelector('.vmc.sel');
   const color=selColor?selColor.dataset.color:VG_COLORS[Math.floor(Math.random()*VG_COLORS.length)];
-  S.videographers.push({id:uid(),name,color});
-  saveState();closeVgModal();renderAll();
+  const vg={id:uid(),name,color};
+  S.videographers.push(vg);
+  await saveVideographer(vg);
+  closeVgModal();renderAll();
 }
 
 function exportCSV(){
@@ -1117,7 +1168,7 @@ const AVAIL_NOTE_MAP={
   '':''
 };
 
-function importParsed(){
+async function importParsed(){
   const team=$('p-team').value.trim();
   const rows=$('parse-tbody').querySelectorAll('tr');
   let count=0;
@@ -1147,7 +1198,7 @@ function importParsed(){
     });
     count++;
   });
-  saveState();
+  for(const j of S.jobs.slice(-count)){await saveJob(j);}
   $('import-status').textContent='✓ '+count+' jobs imported!';
   $('import-status').style.color='var(--green)';
   $('btn-import').style.display='none';
@@ -1165,8 +1216,8 @@ function navigate(dir){
 function goToday(){S.currentDate=new Date();renderAll()}
 
 /* ===== INIT ===== */
-function init(){
-  if(!loadState()) initSampleData();
+async function init(){
+  await loadState();
 
   // Film strip
   renderAll();
@@ -1202,7 +1253,7 @@ function init(){
   $('btn-new').addEventListener('click',()=>openNewModal());
   $('mdl-close').addEventListener('click',closeModal);
   $('mdl-cancel').addEventListener('click',closeModal);
-  $('mdl-save').addEventListener('click',saveJob);
+  $('mdl-save').addEventListener('click',saveJobModal);
   $('mdl-del').addEventListener('click',deleteJob);
   $('mo').addEventListener('click',e=>{if(e.target===$('mo'))closeModal()});
 
@@ -1225,7 +1276,7 @@ function init(){
   // Notifications
   $('notif-btn').addEventListener('click',openNotifPanel);
   $('notif-close').addEventListener('click',closeNotifPanel);
-  $('notif-clear').addEventListener('click',()=>{S.notifications=[];saveState();renderNotifBadge();renderNotifPanel();});
+  $('notif-clear').addEventListener('click',async()=>{await clearAllNotifications();S.notifications=[];renderNotifBadge();renderNotifPanel();});
   renderNotifBadge();
 
   // Paste Schedule

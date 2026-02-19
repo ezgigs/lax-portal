@@ -176,6 +176,14 @@ h1,h2,h3,h4,h5{font-family:'Syne',sans-serif}button{cursor:pointer;font-family:'
 .parse-hint span{color:var(--amber)}
 .preview-count{font-size:.8rem;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:8px}
 .preview-count strong{color:var(--green);font-family:'Syne',sans-serif}
+.avail-chips{display:flex;gap:4px;flex-wrap:nowrap}
+.avail-chip{padding:3px 9px;border-radius:20px;font-size:.68rem;font-weight:700;cursor:pointer;border:1px solid transparent;transition:all .15s ease;white-space:nowrap;background:var(--card2);color:var(--text3);border-color:var(--border)}
+.avail-chip.sel-yes{background:rgba(92,184,92,.2);color:#5cb85c;border-color:#5cb85c}
+.avail-chip.sel-no{background:rgba(224,92,92,.2);color:#e05c5c;border-color:#e05c5c}
+.avail-chip.sel-maybe{background:rgba(245,166,35,.15);color:#f5a623;border-color:#f5a623}
+.avail-chip.sel-pending{background:rgba(91,141,238,.15);color:#5b8dee;border-color:#5b8dee}
+.p-time-override{display:flex;align-items:center;gap:6px;margin-top:8px;padding:7px 10px;background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);font-size:.75rem;color:var(--text3)}
+.p-time-override button{font-size:.72rem;padding:3px 10px}
 </style>
 </head>
 <body>
@@ -290,9 +298,19 @@ h1,h2,h3,h4,h5{font-family:'Syne',sans-serif}button{cursor:pointer;font-family:'
         <label class="fl">Team (applied to all imported jobs)</label>
         <input class="fi" id="p-team" placeholder="e.g. Boys Varsity (optional)">
       </div>
-      <div class="fgr" style="margin-top:10px">
-        <label class="fl">Year (if not in text)</label>
-        <input class="fi" id="p-year" placeholder="e.g. 2025" style="max-width:120px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">
+        <div class="fgr" style="flex:0 0 auto">
+          <label class="fl">Year (if not in text)</label>
+          <input class="fi" id="p-year" placeholder="e.g. 2025" style="max-width:110px">
+        </div>
+        <div class="fgr" style="flex:0 0 auto">
+          <label class="fl">Override Start Time (all rows)</label>
+          <input class="fi" type="time" id="p-start" style="max-width:130px">
+        </div>
+        <div class="fgr" style="flex:0 0 auto">
+          <label class="fl">Override End Time (all rows)</label>
+          <input class="fi" type="time" id="p-end" style="max-width:130px">
+        </div>
       </div>
       <textarea class="paste-area" id="paste-input" placeholder="Paste schedule here...&#10;&#10;Tuesday, 2/24 - 4pm - vs Gonzaga&#10;Friday, 2/27 - 4:45pm - vs Washington &amp; Liberty&#10;Saturday, 2/28 - 11am at St Christopher's" style="margin-top:12px"></textarea>
       <button class="btn btn-p parse-btn" id="btn-parse">🔍 Parse Schedule</button>
@@ -300,7 +318,7 @@ h1,h2,h3,h4,h5{font-family:'Syne',sans-serif}button{cursor:pointer;font-family:'
         <div class="preview-count"><strong id="parse-count">0</strong> games detected — review &amp; edit before importing:</div>
         <div style="overflow-x:auto">
           <table class="preview-table">
-            <thead><tr><th>Title / Opponent</th><th>Date</th><th>Time</th><th>End Time</th><th>Type</th><th></th></tr></thead>
+            <thead><tr><th>Title / Opponent</th><th>Date</th><th>Start</th><th>End</th><th>Type</th><th>Availability</th><th></th></tr></thead>
             <tbody id="parse-tbody"></tbody>
           </table>
         </div>
@@ -385,30 +403,8 @@ function saveState(){
 }
 
 function initSampleData(){
-  S.videographers=[
-    {id:uid(),name:'Marcus Johnson',color:'#5b8dee'},
-    {id:uid(),name:'Tyler Reed',color:'#e05c5c'},
-    {id:uid(),name:'Aiden Park',color:'#5cb85c'},
-    {id:uid(),name:'Sofia Martinez',color:'#9b59b6'}
-  ];
-  const vg=S.videographers;
-  S.jobs=[
-    {id:uid(),title:'Boys Varsity vs. Westfield',date:'2025-02-08',startTime:'10:00',endTime:'12:00',type:'Game Coverage',team:'Boys Varsity',assignedVideographer:vg[0].name,status:'Paid',payAmount:200,notes:'Home game',colorTag:''},
-    {id:uid(),title:'Girls JV vs. Summit',date:'2025-02-12',startTime:'14:00',endTime:'16:00',type:'Game Coverage',team:'Girls JV',assignedVideographer:vg[3].name,status:'Paid',payAmount:150,notes:'',colorTag:''},
-    {id:uid(),title:'Boys Varsity vs. Cranford',date:'2025-02-15',startTime:'11:00',endTime:'13:00',type:'Game Coverage',team:'Boys Varsity',assignedVideographer:vg[1].name,status:'Delivered',payAmount:200,notes:'Awaiting payment',colorTag:''},
-    {id:uid(),title:'Girls Varsity vs. Ridge',date:'2025-02-19',startTime:'15:00',endTime:'17:00',type:'Game Coverage',team:'Girls Varsity',assignedVideographer:vg[3].name,status:'Confirmed',payAmount:175,notes:'',colorTag:''},
-    {id:uid(),title:'Boys JV vs. Scotch Plains',date:'2025-02-22',startTime:'09:00',endTime:'11:00',type:'Game Coverage',team:'Boys JV',assignedVideographer:'Unassigned',status:'Needs Coverage',payAmount:150,notes:'Need someone ASAP',colorTag:''},
-    {id:uid(),title:'Highlight Reel - Season Opener',date:'2025-02-25',startTime:'18:00',endTime:'20:00',type:'Highlight Reel',team:'Boys Varsity',assignedVideographer:vg[0].name,status:'In Progress',payAmount:350,notes:'',colorTag:''},
-    {id:uid(),title:'Next Level LAX Showcase - Day 1',date:'2025-03-01',startTime:'08:00',endTime:'17:00',type:'Tournament',team:'Next Level LAX',assignedVideographer:vg[0].name,status:'Confirmed',payAmount:500,notes:'Full day coverage, 2-day event',colorTag:''},
-    {id:uid(),title:'Next Level LAX Showcase - Day 2',date:'2025-03-02',startTime:'08:00',endTime:'16:00',type:'Tournament',team:'Next Level LAX',assignedVideographer:vg[2].name,status:'Confirmed',payAmount:500,notes:'Day 2, multi-camera setup',colorTag:''},
-    {id:uid(),title:'Girls Varsity vs. Watchung',date:'2025-03-05',startTime:'16:00',endTime:'18:00',type:'Game Coverage',team:'Girls Varsity',assignedVideographer:vg[3].name,status:'Pending Payment',payAmount:175,notes:'Invoice sent 3/6',colorTag:''},
-    {id:uid(),title:'Boys Varsity vs. SPF',date:'2025-03-08',startTime:'11:00',endTime:'13:00',type:'Game Coverage',team:'Boys Varsity',assignedVideographer:vg[1].name,status:'Needs Coverage',payAmount:200,notes:'',colorTag:''},
-    {id:uid(),title:'Spring Fundraiser Event',date:'2025-03-15',startTime:'17:00',endTime:'21:00',type:'Event',team:'',assignedVideographer:vg[2].name,status:'Confirmed',payAmount:400,notes:'Evening event, bring lighting',colorTag:''},
-    {id:uid(),title:'Girls JV vs. Union',date:'2025-03-18',startTime:'14:00',endTime:'16:00',type:'Game Coverage',team:'Girls JV',assignedVideographer:'Unassigned',status:'Needs Coverage',payAmount:150,notes:'',colorTag:''},
-    {id:uid(),title:'Boys Varsity vs. Livingston',date:'2025-03-22',startTime:'10:00',endTime:'12:00',type:'Game Coverage',team:'Boys Varsity',assignedVideographer:vg[0].name,status:'Confirmed',payAmount:200,notes:'',colorTag:''},
-    {id:uid(),title:'Highlight Reel - March Madness',date:'2025-04-01',startTime:'19:00',endTime:'21:00',type:'Highlight Reel',team:'Girls Varsity',assignedVideographer:vg[1].name,status:'Needs Coverage',payAmount:300,notes:'Compilation of March games',colorTag:''},
-    {id:uid(),title:'Boys Varsity Playoff Game',date:'2025-04-12',startTime:'13:00',endTime:'15:30',type:'Game Coverage',team:'Boys Varsity',assignedVideographer:vg[0].name,status:'Confirmed',payAmount:250,notes:'If they make playoffs',colorTag:''}
-  ];
+  S.videographers=[];
+  S.jobs=[];
   saveState();
 }
 
@@ -762,6 +758,8 @@ function openPasteModal(){
   $('paste-input').value='';
   $('p-team').value='';
   $('p-year').value=new Date().getFullYear();
+  $('p-start').value='';
+  $('p-end').value='';
   $('parse-preview').style.display='none';
   $('btn-import').style.display='none';
   $('import-status').textContent='';
@@ -823,9 +821,36 @@ function parseScheduleLine(line, fallbackYear){
   return{title,date:dateVal,startTime:start,endTime:end,type:'Game Coverage'};
 }
 
+const AVAIL_OPTIONS=[
+  {key:'yes',label:'✓ Yes',cls:'sel-yes'},
+  {key:'no',label:'✗ No',cls:'sel-no'},
+  {key:'maybe',label:'? Maybe',cls:'sel-maybe'},
+  {key:'pending',label:'⏳ Pending',cls:'sel-pending'}
+];
+
+function makeAvailChips(i){
+  return AVAIL_OPTIONS.map(a=>`<button class="avail-chip" data-avail="${a.key}" data-row="${i}">${a.label}</button>`).join('');
+}
+
+function applyAvailChipListeners(tbody){
+  tbody.querySelectorAll('.avail-chip').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const row=btn.dataset.row;
+      tbody.querySelectorAll(`.avail-chip[data-row="${row}"]`).forEach(b=>{
+        AVAIL_OPTIONS.forEach(a=>b.classList.remove(a.cls));
+      });
+      const opt=AVAIL_OPTIONS.find(a=>a.key===btn.dataset.avail);
+      if(opt) btn.classList.add(opt.cls);
+      btn.closest('tr').dataset.avail=btn.dataset.avail;
+    });
+  });
+}
+
 function parseSchedule(){
   const raw=$('paste-input').value;
   const year=$('p-year').value||new Date().getFullYear();
+  const overrideStart=$('p-start').value;
+  const overrideEnd=$('p-end').value;
   const lines=raw.split('\n');
   const results=[];
   lines.forEach(line=>{
@@ -834,7 +859,7 @@ function parseSchedule(){
   });
   const tbody=$('parse-tbody');
   if(!results.length){
-    tbody.innerHTML='<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:20px">No dates detected. Make sure each line has a date like 2/24 or 3/15.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="7" style="color:var(--text3);text-align:center;padding:20px">No dates detected. Make sure each line has a date like 2/24 or 3/15.</td></tr>';
     $('parse-preview').style.display='block';
     $('btn-import').style.display='none';
     $('parse-count').textContent='0';
@@ -843,26 +868,45 @@ function parseSchedule(){
   $('parse-count').textContent=results.length;
   let rows='';
   results.forEach((r,i)=>{
-    rows+=`<tr data-idx="${i}">
+    const st=overrideStart||r.startTime;
+    const et=overrideEnd||r.endTime;
+    rows+=`<tr data-idx="${i}" data-avail="">
       <td><input class="pi" data-field="title" value="${r.title.replace(/"/g,'&quot;')}" style="min-width:160px"></td>
       <td><input class="pi" data-field="date" type="date" value="${r.date}" style="min-width:110px"></td>
-      <td><input class="pi" data-field="startTime" type="time" value="${r.startTime}"></td>
-      <td><input class="pi" data-field="endTime" type="time" value="${r.endTime}"></td>
+      <td><input class="pi" data-field="startTime" type="time" value="${st}"></td>
+      <td><input class="pi" data-field="endTime" type="time" value="${et}"></td>
       <td><select class="ps" data-field="type"><option${r.type==='Game Coverage'?' selected':''}>Game Coverage</option><option${r.type==='Event'?' selected':''}>Event</option><option${r.type==='Tournament'?' selected':''}>Tournament</option><option${r.type==='Highlight Reel'?' selected':''}>Highlight Reel</option><option${r.type==='Other'?' selected':''}>Other</option></select></td>
-      <td><button class="row-del" data-idx="${i}" title="Remove">✕</button></td>
+      <td><div class="avail-chips">${makeAvailChips(i)}</div></td>
+      <td><button class="row-del" title="Remove">✕</button></td>
     </tr>`;
   });
   tbody.innerHTML=rows;
+  applyAvailChipListeners(tbody);
   tbody.querySelectorAll('.row-del').forEach(btn=>btn.addEventListener('click',()=>{
     btn.closest('tr').remove();
     const remaining=tbody.querySelectorAll('tr').length;
     $('parse-count').textContent=remaining;
-    if(!remaining){$('btn-import').style.display='none';}
+    if(!remaining) $('btn-import').style.display='none';
   }));
   $('parse-preview').style.display='block';
   $('btn-import').style.display='inline-flex';
   $('import-status').textContent='';
 }
+
+const AVAIL_STATUS_MAP={
+  'yes':'Confirmed',
+  'no':'Cancelled',
+  'maybe':'Needs Coverage',
+  'pending':'Needs Coverage',
+  '':'Needs Coverage'
+};
+const AVAIL_NOTE_MAP={
+  'yes':'Videographer available',
+  'no':'Videographer unavailable',
+  'maybe':'Videographer tentative',
+  'pending':'Awaiting videographer response',
+  '':''
+};
 
 function importParsed(){
   const team=$('p-team').value.trim();
@@ -873,13 +917,16 @@ function importParsed(){
     const title=get('title').trim();
     const date=get('date');
     if(!title||!date)return;
+    const avail=row.dataset.avail||'';
+    const status=AVAIL_STATUS_MAP[avail]||'Needs Coverage';
+    const notes=AVAIL_NOTE_MAP[avail]||'';
     S.jobs.push({
       id:uid(),title,date,
       startTime:get('startTime'),endTime:get('endTime'),
       type:get('type'),team:team,
       assignedVideographer:'Unassigned',
-      status:'Needs Coverage',
-      payAmount:0,notes:'',colorTag:''
+      status,
+      payAmount:0,notes,colorTag:avail
     });
     count++;
   });

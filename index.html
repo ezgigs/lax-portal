@@ -197,6 +197,7 @@ h1,h2,h3,h4,h5{font-family:'Syne',sans-serif}button{cursor:pointer;font-family:'
       </div>
       <div class="hdr-actions">
         <button class="btn btn-g btn-sm" id="btn-exp" title="Export CSV">⬇ Export</button>
+        <button class="btn btn-g btn-sm" id="btn-reset" title="Clear all jobs" style="color:var(--red);border-color:rgba(224,92,92,.3)">🗑 Reset</button>
         <button class="btn btn-g btn-sm" id="btn-paste" title="Paste Schedule">📋 Paste Schedule</button>
         <button class="btn btn-p" id="btn-new" title="New Job (N)">＋ New Job</button>
       </div>
@@ -391,15 +392,24 @@ let S = {
   filterVg:null
 };
 
+const STATE_VERSION='v2';
 function loadState(){
   try{
     const d=localStorage.getItem('lax_portal_state');
-    if(d){const p=JSON.parse(d);S.jobs=p.jobs||[];S.videographers=p.videographers||[];return true}
+    if(d){
+      const p=JSON.parse(d);
+      if(p.version!==STATE_VERSION){localStorage.removeItem('lax_portal_state');return false;}
+      S.jobs=p.jobs||[];S.videographers=p.videographers||[];return true;
+    }
   }catch(e){}
   return false;
 }
 function saveState(){
-  localStorage.setItem('lax_portal_state',JSON.stringify({jobs:S.jobs,videographers:S.videographers}));
+  localStorage.setItem('lax_portal_state',JSON.stringify({version:STATE_VERSION,jobs:S.jobs,videographers:S.videographers}));
+}
+function resetCalendar(){
+  if(!confirm('Clear ALL jobs from the calendar? This cannot be undone.'))return;
+  S.jobs=[];saveState();renderAll();
 }
 
 function initSampleData(){
@@ -1000,6 +1010,7 @@ function init(){
 
   // Export
   $('btn-exp').addEventListener('click',exportCSV);
+  $('btn-reset').addEventListener('click',resetCalendar);
 
   // Paste Schedule
   $('btn-paste').addEventListener('click',openPasteModal);

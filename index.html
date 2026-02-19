@@ -184,6 +184,19 @@ h1,h2,h3,h4,h5{font-family:'Syne',sans-serif}button{cursor:pointer;font-family:'
 .avail-chip.sel-pending{background:rgba(91,141,238,.15);color:#5b8dee;border-color:#5b8dee}
 .p-time-override{display:flex;align-items:center;gap:6px;margin-top:8px;padding:7px 10px;background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);font-size:.75rem;color:var(--text3)}
 .p-time-override button{font-size:.72rem;padding:3px 10px}
+.mass-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px}
+.mass-row-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);white-space:nowrap;min-width:80px}
+.mass-chip{padding:4px 11px;border-radius:20px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text3);transition:all .15s ease;white-space:nowrap}
+.mass-chip:hover{border-color:var(--border2);color:var(--text)}
+.mass-chip.mc-confirmed{background:rgba(92,184,92,.2);color:#5cb85c;border-color:#5cb85c}
+.mass-chip.mc-needs{background:rgba(245,166,35,.15);color:#f5a623;border-color:#f5a623}
+.mass-chip.mc-cancelled{background:rgba(224,92,92,.2);color:#e05c5c;border-color:#e05c5c}
+.mass-chip.mc-pending{background:rgba(91,141,238,.15);color:#5b8dee;border-color:#5b8dee}
+.mass-chip.mc-inprog{background:rgba(78,205,196,.15);color:#4ecdc4;border-color:#4ecdc4}
+.color-dot{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s ease;flex-shrink:0}
+.color-dot:hover{transform:scale(1.2)}
+.color-dot.sel{border-color:#fff;transform:scale(1.15)}
+#mass-controls{display:none;margin-top:12px}
 </style>
 </head>
 <body>
@@ -316,10 +329,25 @@ h1,h2,h3,h4,h5{font-family:'Syne',sans-serif}button{cursor:pointer;font-family:'
       <textarea class="paste-area" id="paste-input" placeholder="Paste schedule here...&#10;&#10;Tuesday, 2/24 - 4pm - vs Gonzaga&#10;Friday, 2/27 - 4:45pm - vs Washington &amp; Liberty&#10;Saturday, 2/28 - 11am at St Christopher's" style="margin-top:12px"></textarea>
       <button class="btn btn-p parse-btn" id="btn-parse">🔍 Parse Schedule</button>
       <div id="parse-preview">
+        <div id="mass-controls">
+          <div class="mass-row">
+            <span class="mass-row-label">Set All Status:</span>
+            <button class="mass-chip" data-mass-status="Confirmed">✓ Confirmed</button>
+            <button class="mass-chip" data-mass-status="Needs Coverage">⚠ Needs Coverage</button>
+            <button class="mass-chip" data-mass-status="In Progress">▶ In Progress</button>
+            <button class="mass-chip" data-mass-status="Pending Payment">💰 Pending Payment</button>
+            <button class="mass-chip" data-mass-status="Cancelled">✕ Cancelled</button>
+          </div>
+          <div class="mass-row">
+            <span class="mass-row-label">Set All Color:</span>
+            <div id="mass-color-dots" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"></div>
+            <button class="mass-chip" id="mass-color-clear" style="margin-left:4px">✕ Clear</button>
+          </div>
+        </div>
         <div class="preview-count"><strong id="parse-count">0</strong> games detected — review &amp; edit before importing:</div>
         <div style="overflow-x:auto">
           <table class="preview-table">
-            <thead><tr><th>Title / Opponent</th><th>Date</th><th>Start</th><th>End</th><th>Type</th><th>Availability</th><th></th></tr></thead>
+            <thead><tr><th>Title / Opponent</th><th>Date</th><th>Start</th><th>End</th><th>Status</th><th>Color</th><th>Avail.</th><th></th></tr></thead>
             <tbody id="parse-tbody"></tbody>
           </table>
         </div>
@@ -771,9 +799,12 @@ function openPasteModal(){
   $('p-start').value='';
   $('p-end').value='';
   $('parse-preview').style.display='none';
+  $('mass-controls').style.display='none';
   $('btn-import').style.display='none';
   $('import-status').textContent='';
   $('parse-tbody').innerHTML='';
+  document.querySelectorAll('[data-mass-status]').forEach(b=>b.classList.remove('mc-confirmed','mc-needs','mc-cancelled','mc-pending','mc-inprog'));
+  document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('sel'));
   $('pmo').classList.add('open');
   setTimeout(()=>$('paste-input').focus(),100);
 }
@@ -856,6 +887,61 @@ function applyAvailChipListeners(tbody){
   });
 }
 
+const COLOR_PALETTE=[
+  {color:'#5cb85c',label:'Green'},
+  {color:'#f5a623',label:'Amber'},
+  {color:'#e05c5c',label:'Red'},
+  {color:'#5b8dee',label:'Blue'},
+  {color:'#9b59b6',label:'Purple'},
+  {color:'#4ecdc4',label:'Teal'},
+  {color:'#e67e22',label:'Orange'},
+  {color:'#1abc9c',label:'Mint'},
+  {color:'#555870',label:'Gray'}
+];
+
+function initMassControls(){
+  const dotsEl=$('mass-color-dots');
+  let h='';
+  COLOR_PALETTE.forEach(c=>h+=`<div class="color-dot" data-color="${c.color}" style="background:${c.color}" title="${c.label}"></div>`);
+  dotsEl.innerHTML=h;
+
+  dotsEl.querySelectorAll('.color-dot').forEach(dot=>{
+    dot.addEventListener('click',()=>{
+      dotsEl.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('sel'));
+      dot.classList.add('sel');
+      const col=dot.dataset.color;
+      document.querySelectorAll('#parse-tbody tr').forEach(row=>{
+        row.dataset.color=col;
+        const pill=row.querySelector('.color-preview');
+        if(pill) pill.style.background=col;
+      });
+    });
+  });
+
+  $('mass-color-clear').addEventListener('click',()=>{
+    dotsEl.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('sel'));
+    document.querySelectorAll('#parse-tbody tr').forEach(row=>{
+      row.dataset.color='';
+      const pill=row.querySelector('.color-preview');
+      if(pill) pill.style.background='var(--border)';
+    });
+  });
+
+  document.querySelectorAll('[data-mass-status]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const status=btn.dataset.massStatus;
+      document.querySelectorAll('[data-mass-status]').forEach(b=>b.classList.remove('mc-confirmed','mc-needs','mc-cancelled','mc-pending','mc-inprog'));
+      const clsMap={'Confirmed':'mc-confirmed','Needs Coverage':'mc-needs','Cancelled':'mc-cancelled','Pending Payment':'mc-pending','In Progress':'mc-inprog'};
+      btn.classList.add(clsMap[status]||'');
+      document.querySelectorAll('#parse-tbody tr').forEach(row=>{
+        const sel=row.querySelector('[data-field="status"]');
+        if(sel) sel.value=status;
+        row.dataset.status=status;
+      });
+    });
+  });
+}
+
 function parseSchedule(){
   const raw=$('paste-input').value;
   const year=$('p-year').value||new Date().getFullYear();
@@ -877,15 +963,17 @@ function parseSchedule(){
   }
   $('parse-count').textContent=results.length;
   let rows='';
+  const statusOpts=STATUSES.map(s=>`<option>${s}</option>`).join('');
   results.forEach((r,i)=>{
     const st=overrideStart||r.startTime;
     const et=overrideEnd||r.endTime;
-    rows+=`<tr data-idx="${i}" data-avail="">
-      <td><input class="pi" data-field="title" value="${r.title.replace(/"/g,'&quot;')}" style="min-width:160px"></td>
-      <td><input class="pi" data-field="date" type="date" value="${r.date}" style="min-width:110px"></td>
+    rows+=`<tr data-idx="${i}" data-avail="" data-color="" data-status="Needs Coverage">
+      <td><input class="pi" data-field="title" value="${r.title.replace(/"/g,'&quot;')}" style="min-width:150px"></td>
+      <td><input class="pi" data-field="date" type="date" value="${r.date}" style="min-width:105px"></td>
       <td><input class="pi" data-field="startTime" type="time" value="${st}"></td>
       <td><input class="pi" data-field="endTime" type="time" value="${et}"></td>
-      <td><select class="ps" data-field="type"><option${r.type==='Game Coverage'?' selected':''}>Game Coverage</option><option${r.type==='Event'?' selected':''}>Event</option><option${r.type==='Tournament'?' selected':''}>Tournament</option><option${r.type==='Highlight Reel'?' selected':''}>Highlight Reel</option><option${r.type==='Other'?' selected':''}>Other</option></select></td>
+      <td><select class="ps" data-field="status" style="min-width:110px">${statusOpts}</select></td>
+      <td><div class="color-preview" style="width:18px;height:18px;border-radius:50%;background:var(--border);border:2px solid var(--border2);cursor:default"></div></td>
       <td><div class="avail-chips">${makeAvailChips(i)}</div></td>
       <td><button class="row-del" title="Remove">✕</button></td>
     </tr>`;
@@ -899,6 +987,9 @@ function parseSchedule(){
     if(!remaining) $('btn-import').style.display='none';
   }));
   $('parse-preview').style.display='block';
+  $('mass-controls').style.display='block';
+  document.querySelectorAll('[data-mass-status]').forEach(b=>b.classList.remove('mc-confirmed','mc-needs','mc-cancelled','mc-pending','mc-inprog'));
+  document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('sel'));
   $('btn-import').style.display='inline-flex';
   $('import-status').textContent='';
 }
@@ -923,20 +1014,24 @@ function importParsed(){
   const rows=$('parse-tbody').querySelectorAll('tr');
   let count=0;
   rows.forEach(row=>{
-    const get=f=>row.querySelector('[data-field="'+f+'"]').value;
-    const title=get('title').trim();
-    const date=get('date');
+    const get=f=>row.querySelector('[data-field="'+f+'"]');
+    const titleEl=get('title'),dateEl=get('date');
+    if(!titleEl||!dateEl)return;
+    const title=titleEl.value.trim();
+    const date=dateEl.value;
     if(!title||!date)return;
     const avail=row.dataset.avail||'';
-    const status=AVAIL_STATUS_MAP[avail]||'Needs Coverage';
+    const statusEl=get('status');
+    const status=statusEl?statusEl.value:(AVAIL_STATUS_MAP[avail]||'Needs Coverage');
     const notes=AVAIL_NOTE_MAP[avail]||'';
+    const colorTag=row.dataset.color||'';
     S.jobs.push({
       id:uid(),title,date,
-      startTime:get('startTime'),endTime:get('endTime'),
-      type:get('type'),team:team,
+      startTime:get('startTime').value,endTime:get('endTime').value,
+      type:get('type').value,team:team,
       assignedVideographer:'Unassigned',
       status,
-      payAmount:0,notes,colorTag:avail
+      payAmount:0,notes,colorTag
     });
     count++;
   });
@@ -1011,6 +1106,9 @@ function init(){
   // Export
   $('btn-exp').addEventListener('click',exportCSV);
   $('btn-reset').addEventListener('click',resetCalendar);
+
+  // Mass controls init
+  initMassControls();
 
   // Paste Schedule
   $('btn-paste').addEventListener('click',openPasteModal);

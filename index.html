@@ -457,15 +457,15 @@ let S = {
 /* ===== SUPABASE ===== */
 const SUPABASE_URL='https://vxejfbsuwuojghyckmus.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4ZWpmYnN1d3VvamdoeWNrbXVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MzczOTcsImV4cCI6MjA4NzExMzM5N30.kiXFHTXIrBKsy75mEs2xbDlUU0_WYbifigVElweHU3s';
-let supabase=null;
+let db=null;
 
 async function loadState(){
-  if(!supabase) return false;
+  if(!db) return false;
   try{
     const [jobsRes,vgRes,notifRes]=await Promise.all([
-      supabase.from('jobs').select('*').order('date',{ascending:true}),
-      supabase.from('videographers').select('*'),
-      supabase.from('notifications').select('*').order('time',{ascending:false}).limit(50)
+      db.from('jobs').select('*').order('date',{ascending:true}),
+      db.from('videographers').select('*'),
+      db.from('notifications').select('*').order('time',{ascending:false}).limit(50)
     ]);
     if(jobsRes.error) throw jobsRes.error;
     if(jobsRes.data) S.jobs=jobsRes.data.map(j=>({
@@ -482,7 +482,7 @@ async function loadState(){
 }
 
 async function saveJob(jobData){
-  if(!supabase) return;
+  if(!db) return;
   const row={
     id:jobData.id,title:jobData.title,date:jobData.date,
     start_time:jobData.startTime,end_time:jobData.endTime,
@@ -491,35 +491,35 @@ async function saveJob(jobData){
     status:jobData.status,pay_amount:jobData.payAmount||0,
     notes:jobData.notes||'',color_tag:jobData.colorTag||''
   };
-  const {error}=await supabase.from('jobs').upsert(row);
+  const {error}=await db.from('jobs').upsert(row);
   if(error) console.error('saveJob error:',error);
 }
 
 async function deleteJobFromDB(id){
-  if(!supabase) return;
-  await supabase.from('jobs').delete().eq('id',id);
+  if(!db) return;
+  await db.from('jobs').delete().eq('id',id);
 }
 
 async function saveVideographer(vg){
-  if(!supabase) return;
-  await supabase.from('videographers').upsert(vg);
+  if(!db) return;
+  await db.from('videographers').upsert(vg);
 }
 
 async function saveNotification(n){
-  if(!supabase) return;
-  await supabase.from('notifications').upsert({
+  if(!db) return;
+  await db.from('notifications').upsert({
     id:n.id,job_title:n.jobTitle,note:n.note,vg:n.vg,time:n.time,read:n.read
   });
 }
 
 async function clearAllJobs(){
-  if(!supabase) return;
-  await supabase.from('jobs').delete().neq('id','__none__');
+  if(!db) return;
+  await db.from('jobs').delete().neq('id','__none__');
 }
 
 async function clearAllNotifications(){
-  if(!supabase) return;
-  await supabase.from('notifications').delete().neq('id','__none__');
+  if(!db) return;
+  await db.from('notifications').delete().neq('id','__none__');
 }
 
 /* ===== NOTIFICATIONS ===== */
@@ -1232,7 +1232,7 @@ async function init(){
   // Init Supabase in background
   try{
     if(window.supabase && typeof window.supabase.createClient === 'function'){
-      supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+      db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
       console.log('Supabase client created');
       // Load with 5s timeout
       const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('Supabase load timeout')),5000));

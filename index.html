@@ -356,6 +356,10 @@ h1,h2,h3,h4,h5{font-family:'Space Grotesk',sans-serif}button{cursor:pointer;font
             <button class="mass-chip" data-mass-status="Cancelled">✕ Cancelled</button>
           </div>
           <div class="mass-row">
+            <span class="mass-row-label">Assign All VG:</span>
+            <select class="fsel" id="mass-vg" style="min-width:140px"><option value="Unassigned">Unassigned</option></select>
+          </div>
+          <div class="mass-row">
             <span class="mass-row-label">Set All Color:</span>
             <div id="mass-color-dots" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"></div>
             <button class="mass-chip" id="mass-color-clear" style="margin-left:4px">✕ Clear</button>
@@ -364,7 +368,7 @@ h1,h2,h3,h4,h5{font-family:'Space Grotesk',sans-serif}button{cursor:pointer;font
         <div class="preview-count"><strong id="parse-count">0</strong> games detected — review &amp; edit before importing:</div>
         <div style="overflow-x:auto">
           <table class="preview-table">
-            <thead><tr><th>Title / Opponent</th><th>Date</th><th>Start</th><th>End</th><th>Status</th><th>Color</th><th>Avail.</th><th></th></tr></thead>
+            <thead><tr><th>Title / Opponent</th><th>Date</th><th>Start</th><th>End</th><th>Status</th><th>Videographer</th><th>Color</th><th>Avail.</th><th></th></tr></thead>
             <tbody id="parse-tbody"></tbody>
           </table>
         </div>
@@ -1008,6 +1012,17 @@ function initMassControls(){
     });
   });
 
+  // Mass VG selector
+  const massVgEl=$('mass-vg');
+  massVgEl.innerHTML='<option value="Unassigned">Unassigned</option>'+S.videographers.map(v=>`<option value="${v.name}">${v.name}</option>`).join('');
+  massVgEl.addEventListener('change',()=>{
+    const val=massVgEl.value;
+    document.querySelectorAll('#parse-tbody tr').forEach(row=>{
+      const sel=row.querySelector('[data-field="vg"]');
+      if(sel) sel.value=val;
+    });
+  });
+
   const MC={'Confirmed':'mc-confirmed','Needs Coverage':'mc-needs','Cancelled':'mc-cancelled','Pending Payment':'mc-pending','In Progress':'mc-inprog'};
   document.querySelectorAll('[data-mass-status]').forEach(btn=>{
     btn.addEventListener('click',()=>{
@@ -1055,6 +1070,7 @@ function parseSchedule(){
   $('parse-count').textContent=results.length;
   let rows='';
   const statusOpts=STATUSES.map(s=>`<option>${s}</option>`).join('');
+  const vgOpts='<option value="Unassigned">Unassigned</option>'+S.videographers.map(v=>`<option value="${v.name}">${v.name}</option>`).join('');
   results.forEach((r,i)=>{
     const st=overrideStart||r.startTime;
     const et=overrideEnd||r.endTime;
@@ -1063,7 +1079,8 @@ function parseSchedule(){
       <td><input class="pi" data-field="date" type="date" value="${r.date}" style="min-width:105px"></td>
       <td><input class="pi" data-field="startTime" type="time" value="${st}"></td>
       <td><input class="pi" data-field="endTime" type="time" value="${et}"></td>
-      <td><select class="ps" data-field="status" style="min-width:110px">${statusOpts}</select></td>
+      <td><select class="ps" data-field="status" style="min-width:100px">${statusOpts}</select></td>
+      <td><select class="ps" data-field="vg" style="min-width:100px">${vgOpts}</select></td>
       <td><div class="color-preview" style="width:18px;height:18px;border-radius:50%;background:var(--border);border:2px solid var(--border2);cursor:default"></div></td>
       <td><div class="avail-chips">${makeAvailChips(i)}</div></td>
       <td><button class="row-del" title="Remove">✕</button></td>
@@ -1118,11 +1135,13 @@ function importParsed(){
     const colorTag=row.dataset.color||'';
     const typeEl=get('type');
     const type=typeEl?typeEl.value:'Game Coverage';
+    const vgEl=get('vg');
+    const vg=vgEl?vgEl.value:'Unassigned';
     S.jobs.push({
       id:uid(),title,date,
       startTime:get('startTime').value,endTime:get('endTime').value,
       type,team:team,
-      assignedVideographer:'Unassigned',
+      assignedVideographer:vg,
       status,
       payAmount:0,notes,colorTag
     });

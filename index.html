@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LAX Portal — Videographer Job Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0e0f13;--card:#16181f;--card2:#1c1e27;--border:#2a2d38;--border2:#353848;--text:#e8eaf0;--text2:#9499b0;--text3:#5c6080;--amber:#f5a623;--amberd:rgba(245,166,35,.15);--red:#e05c5c;--redd:rgba(224,92,92,.15);--teal:#4ecdc4;--blue:#5b8dee;--blued:rgba(91,141,238,.15);--green:#5cb85c;--greend:rgba(92,184,92,.15);--purple:#9b59b6;--gray:#555870;--r:10px;--rs:6px;--sh:0 4px 24px rgba(0,0,0,.4);--shl:0 8px 40px rgba(0,0,0,.6);--t:.2s ease}
+html{font-size:14px}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+h1,h2,h3,h4,h5{font-family:'Syne',sans-serif}button{cursor:pointer;font-family:'DM Sans',sans-serif;border:none;outline:none}input,select,textarea{font-family:'DM Sans',sans-serif;outline:none}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--card)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+#app-wrapper{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+#app-header{background:var(--card);border-bottom:1px solid var(--border);z-index:100;flex-shrink:0}
+.filmstrip{height:8px;background:#0a0b0e;position:relative;overflow:hidden}
+.filmstrip::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 5px,#0e0f13 5px 7px,transparent 7px 9px);background-size:14px 100%}
+.fs-holes{position:absolute;top:0;left:0;right:0;height:8px;display:flex;align-items:center;padding:0 7px;gap:14px;z-index:1}
+.fs-hole{width:4px;height:4px;border-radius:50%;background:#0e0f13;flex-shrink:0;box-shadow:0 0 0 1px rgba(255,255,255,.06)}
+.hdr-inner{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;gap:16px}
+.hdr-brand{display:flex;align-items:center;gap:12px}
+.hdr-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--amber),#e8920f);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 20px rgba(245,166,35,.3);flex-shrink:0}
+.hdr-t{font-size:1.35rem;font-weight:800;letter-spacing:-.3px}.hdr-t span{color:var(--amber)}
+.hdr-sub{font-size:.72rem;color:var(--text3);margin-top:1px}
+.hdr-actions{display:flex;align-items:center;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--rs);font-size:.83rem;font-weight:500;transition:all var(--t)}
+.btn-p{background:var(--amber);color:#0e0f13;font-weight:700}.btn-p:hover{background:#ffb83d;box-shadow:0 0 20px rgba(245,166,35,.35);transform:translateY(-1px)}
+.btn-g{background:var(--card2);color:var(--text2);border:1px solid var(--border)}.btn-g:hover{background:var(--border);color:var(--text)}
+.btn-d{background:var(--redd);color:var(--red);border:1px solid rgba(224,92,92,.3)}.btn-d:hover{background:rgba(224,92,92,.25)}
+.btn-sm{padding:5px 12px;font-size:.78rem}
+#stats-bar{background:var(--card);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;gap:10px;overflow-x:auto;flex-shrink:0}
+.stc{flex:1;min-width:130px;background:var(--card2);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;transition:all var(--t);position:relative;overflow:hidden}
+.stc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stc-j::before{background:var(--blue)}.stc-r::before{background:var(--amber)}.stc-p::before{background:var(--green)}.stc-d::before{background:var(--red)}
+.stc:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:var(--sh)}
+.stc-l{font-size:.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+.stc-v{font-family:'Syne',sans-serif;font-size:1.55rem;font-weight:700;line-height:1;margin-top:3px}
+.stc-s{font-size:.7rem;color:var(--text3);margin-top:3px}
+#cov-alert{display:none;background:rgba(245,166,35,.07);border-bottom:1px solid rgba(245,166,35,.2);padding:7px 24px;font-size:.8rem;color:var(--amber);align-items:center;gap:8px;flex-shrink:0}
+#cov-alert.show{display:flex}
+#main-layout{display:flex;overflow:hidden;flex:1;min-height:0}
+#roster{width:256px;min-width:256px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:all .25s ease;overflow:hidden;flex-shrink:0}
+#roster.collapsed{width:0;min-width:0;opacity:0;pointer-events:none}
+.ros-h{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ros-t{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2)}
+.ros-body{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px}
+.vgc{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);padding:11px;cursor:pointer;transition:all var(--t)}
+.vgc:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:var(--sh)}
+.vgc.active{border-color:var(--amber);background:var(--amberd)}
+.vgc-top{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+.vgc-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;color:#fff;flex-shrink:0}
+.vgc-name{font-weight:600;font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vgc-stats{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.vgc-st{font-size:.7rem;color:var(--text3)}.vgc-st span{color:var(--text2);font-weight:600}
+.vgc-bar{margin-top:7px;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.vgc-bar-f{height:100%;background:var(--green);border-radius:2px;transition:width .4s ease}
+.ros-foot{padding:10px;border-top:1px solid var(--border);flex-shrink:0}
+.btn-addvg{width:100%;background:var(--card2);border:1px dashed var(--border2);color:var(--text3);border-radius:var(--rs);padding:9px;font-size:.8rem;transition:all var(--t);display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-addvg:hover{border-color:var(--amber);color:var(--amber)}
+#content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#toolbar{padding:10px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0;background:var(--card)}
+.vtabs{display:flex;background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:3px;gap:2px}
+.vtab{padding:5px 14px;border-radius:4px;font-size:.8rem;font-weight:600;color:var(--text3);background:transparent;transition:all var(--t)}
+.vtab.active{background:var(--amber);color:#0e0f13}
+.vtab:hover:not(.active){color:var(--text);background:var(--border)}
+.navc{display:flex;align-items:center;gap:6px;margin-left:auto}
+.nav-b{width:28px;height:28px;background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:.9rem;transition:all var(--t)}
+.nav-b:hover{border-color:var(--border2);color:var(--text)}
+.nav-l{font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;min-width:150px;text-align:center}
+.ros-tog{width:28px;height:28px;background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:.85rem;transition:all var(--t)}
+.ros-tog:hover{border-color:var(--amber);color:var(--amber)}
+#fbar{padding:7px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;flex-wrap:wrap;background:var(--bg);flex-shrink:0}
+.fsel{background:var(--card);border:1px solid var(--border);color:var(--text2);border-radius:var(--rs);padding:4px 24px 4px 9px;font-size:.76rem;appearance:none;-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239499b0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center;transition:all var(--t)}
+.fsel:focus{border-color:var(--amber);color:var(--text)}
+.fchip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:.73rem;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text2);transition:all var(--t)}
+.fchip.active{background:var(--amberd);border-color:var(--amber);color:var(--amber)}
+.fchip:hover:not(.active){border-color:var(--border2);color:var(--text)}
+.af-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:.72rem;font-weight:500;background:var(--blued);border:1px solid rgba(91,141,238,.3);color:var(--blue)}
+.af-chip button{background:none;border:none;color:inherit;font-size:.85rem;line-height:1;padding:0;cursor:pointer}
+.btn-clr{background:transparent;border:none;color:var(--text3);font-size:.73rem;padding:3px 7px;border-radius:var(--rs);transition:all var(--t)}
+.btn-clr:hover{color:var(--red)}
+#cal{flex:1;overflow:auto;padding:14px 18px}
+.mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border-radius:var(--r);overflow:hidden}
+.mhdr{background:var(--card2);padding:7px;text-align:center;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
+.mday{background:var(--card);padding:6px;min-height:90px;cursor:pointer;transition:background var(--t);display:flex;flex-direction:column;gap:2px}
+.mday:hover{background:var(--card2)}.mday.om{opacity:.3}.mday.today{background:rgba(245,166,35,.05)}.mday.today .dnum{color:var(--amber);font-weight:700}
+.dnum{font-size:.78rem;font-weight:600;color:var(--text2);line-height:1;margin-bottom:2px}
+.dpill{display:block;padding:2px 5px;border-radius:3px;font-size:.64rem;font-weight:600;cursor:pointer;transition:all var(--t);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+.dpill:hover{filter:brightness(1.2)}.dmore{font-size:.62rem;color:var(--text3);cursor:pointer}.dmore:hover{color:var(--amber)}
+.ww{display:flex;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--border)}
+.wtc{width:52px;min-width:52px;background:var(--card2);flex-shrink:0}
+.wth{height:46px;border-bottom:1px solid var(--border)}
+.wts{height:48px;display:flex;align-items:flex-start;justify-content:flex-end;padding:3px 7px 0 0;font-size:.62rem;color:var(--text3);border-bottom:1px solid var(--border)}
+.wdc{flex:1;background:var(--card);min-width:0;position:relative}
+.wdh{height:46px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:background var(--t)}
+.wdh:hover{background:var(--card2)}.wdh.today{background:rgba(245,166,35,.07)}
+.wdn{font-size:.65rem;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.wdd{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700}.wdh.today .wdd{color:var(--amber)}
+.wsa{position:relative}.wsbg{height:48px;border-bottom:1px solid var(--border)}
+.wev{position:absolute;left:2px;right:2px;border-radius:4px;padding:3px 5px;font-size:.64rem;font-weight:600;cursor:pointer;transition:all var(--t);overflow:hidden;z-index:2;border-left:3px solid rgba(255,255,255,.25);color:#fff}
+.wev:hover{filter:brightness(1.15);z-index:3;box-shadow:var(--sh)}
+.wet{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.weti{opacity:.7;font-size:.6rem}
+.lg{margin-bottom:18px;animation:fadeIn .3s ease forwards}
+.ldh{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.ldl{font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;white-space:nowrap}
+.ldline{flex:1;height:1px;background:var(--border)}.tbd{font-size:.63rem;background:var(--amber);color:#0e0f13;padding:2px 7px;border-radius:10px;font-weight:700}
+.jc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;margin-bottom:7px;cursor:pointer;transition:all var(--t);display:grid;grid-template-columns:4px 1fr auto;gap:12px;align-items:start;animation:fadeIn .25s ease forwards}
+.jc:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:var(--sh)}
+.jcb{border-radius:2px;align-self:stretch}
+.jcm{display:flex;flex-direction:column;gap:5px;min-width:0}
+.jct{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.cfb{font-size:.63rem;background:rgba(245,166,35,.15);color:var(--amber);border:1px solid rgba(245,166,35,.3);padding:1px 6px;border-radius:4px}
+.jcmeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.jcmi{font-size:.73rem;color:var(--text3);display:flex;align-items:center;gap:3px}
+.jcr{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.sbadge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:.7rem;font-weight:600;white-space:nowrap}
+.payamt{font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;color:var(--green)}
+.ptl{display:flex;align-items:center;gap:4px;margin-top:4px}
+.pts{display:flex;align-items:center;gap:3px;font-size:.64rem;color:var(--text3)}.pts.dn{color:var(--green)}.pts.ac{color:var(--amber)}
+.pta{color:var(--border2);font-size:.6rem}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;color:var(--text3);text-align:center}
+.empty-i{font-size:3rem;opacity:.3}.empty-t{font-size:.88rem}
+#mo{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+#mo.open{display:flex}
+#mdl{background:var(--card);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;animation:slideUp .25s ease;box-shadow:var(--shl)}
+.mh{padding:18px 24px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--card);z-index:1;border-radius:14px 14px 0 0}
+.mt{font-size:1.05rem;font-weight:700}
+.mx{width:30px;height:30px;background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:all var(--t)}
+.mx:hover{background:var(--redd);border-color:var(--red);color:var(--red)}
+.mb{padding:18px 24px}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fgr{display:flex;flex-direction:column;gap:5px}.fgr.full{grid-column:1/-1}
+.fl{font-size:.74rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.fi,.fse,.fta{background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--rs);padding:9px 12px;font-size:.85rem;transition:all var(--t);width:100%}
+.fi:focus,.fse:focus,.fta:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(245,166,35,.1)}
+.fse{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239499b0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;background-color:var(--card2)}
+.fta{resize:vertical;min-height:70px}
+.ferr{font-size:.72rem;color:var(--red);margin-top:2px;display:none}.ferr.show{display:block}
+.mf{padding:14px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;bottom:0;background:var(--card);border-radius:0 0 14px 14px}
+.mf-r{display:flex;gap:8px}
+#vmo{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1001;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+#vmo.open{display:flex}
+#vmdl{background:var(--card);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:380px;animation:slideUp .25s ease;box-shadow:var(--shl);padding:24px}
+#vmdl h3{font-size:1rem;font-weight:700;margin-bottom:18px}
+#dp{position:fixed;right:0;top:0;bottom:0;width:300px;background:var(--card);border-left:1px solid var(--border);z-index:200;transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column;box-shadow:var(--shl)}
+#dp.open{transform:translateX(0)}
+.dph{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.dpt{font-size:.95rem;font-weight:700}
+.dpb{flex:1;overflow-y:auto;padding:12px}
+.dpj{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);padding:11px;margin-bottom:8px;cursor:pointer;transition:all var(--t);border-left:3px solid transparent}
+.dpj:hover{border-color:var(--border2);transform:translateX(2px)}
+.dpjt{font-weight:600;font-size:.85rem;margin-bottom:4px}.dpjm{font-size:.72rem;color:var(--text3)}
+@media(max-width:768px){#roster{display:none}.fg{grid-template-columns:1fr}.fgr.full{grid-column:1}#stats-bar{gap:7px}.stc-v{font-size:1.2rem}.hdr-t{font-size:1.1rem}.nav-l{min-width:100px;font-size:.78rem}}
+</style>
+</head>
+<body>
+<div id="app-wrapper">
+  <header id="app-header">
+    <div class="filmstrip"><div class="fs-holes" id="fsh"></div></div>
+    <div class="hdr-inner">
+      <div class="hdr-brand">
+        <div class="hdr-icon">🎬</div>
+        <div><div class="hdr-t">LAX <span>Portal</span></div><div class="hdr-sub">Videographer Job Tracker</div></div>
+      </div>
+      <div class="hdr-actions">
+        <button class="btn btn-g btn-sm" id="btn-exp" title="Export CSV">⬇ Export</button>
+        <button class="btn btn-p" id="btn-new" title="New Job (N)">＋ New Job</button>
+      </div>
+    </div>
+  </header>
+  <div id="stats-bar">
+    <div class="stc stc-j"><div class="stc-l">Jobs This Month</div><div class="stc-v" id="sv-j">0</div><div class="stc-s" id="ss-j"></div></div>
+    <div class="stc stc-r"><div class="stc-l">Total Revenue</div><div class="stc-v" id="sv-r">$0</div><div class="stc-s" id="ss-r">this month</div></div>
+    <div class="stc stc-p"><div class="stc-l">Amount Paid</div><div class="stc-v" id="sv-p">$0</div><div class="stc-s" id="ss-p">collected</div></div>
+    <div class="stc stc-d"><div class="stc-l">Pending</div><div class="stc-v" id="sv-d">$0</div><div class="stc-s" id="ss-d">outstanding</div></div>
+  </div>
+  <div id="cov-alert"><span>⚠</span><span id="cov-text"></span></div>
+  <div id="main-layout">
+    <aside id="roster">
+      <div class="ros-h"><span class="ros-t">📹 Roster</span></div>
+      <div class="ros-body" id="ros-body"></div>
+      <div class="ros-foot"><button class="btn-addvg" id="btn-addvg">＋ Add Videographer</button></div>
+    </aside>
+    <main id="content">
+      <div id="toolbar">
+        <button class="ros-tog" id="ros-tog" title="Toggle Roster">☰</button>
+        <div class="vtabs">
+          <button class="vtab active" data-view="month">Month</button>
+          <button class="vtab" data-view="week">Week</button>
+          <button class="vtab" data-view="list">List</button>
+        </div>
+        <div class="navc">
+          <button class="nav-b" id="nav-prev">‹</button>
+          <span class="nav-l" id="nav-label"></span>
+          <button class="nav-b" id="nav-next">›</button>
+          <button class="nav-b" id="nav-today" title="Today" style="font-size:.7rem;width:auto;padding:0 8px">Today</button>
+        </div>
+      </div>
+      <div id="fbar">
+        <span style="font-size:.72rem;color:var(--text3);font-weight:600">Filters:</span>
+        <select class="fsel" id="f-status"><option value="">All Statuses</option><option value="Needs Coverage">Needs Coverage</option><option value="Confirmed">Confirmed</option><option value="In Progress">In Progress</option><option value="Delivered">Delivered</option><option value="Paid">Paid</option><option value="Pending Payment">Pending Payment</option><option value="Cancelled">Cancelled</option></select>
+        <select class="fsel" id="f-vg"><option value="">All Videographers</option></select>
+        <select class="fsel" id="f-team"><option value="">All Teams</option></select>
+        <select class="fsel" id="f-type"><option value="">All Types</option><option value="Game Coverage">Game Coverage</option><option value="Event">Event</option><option value="Tournament">Tournament</option><option value="Highlight Reel">Highlight Reel</option><option value="Other">Other</option></select>
+        <div id="af-chips"></div>
+        <button class="btn-clr" id="btn-clr" style="display:none">✕ Clear All</button>
+      </div>
+      <div id="cal"></div>
+    </main>
+  </div>
+</div>
+<!-- Job Modal -->
+<div id="mo">
+  <div id="mdl">
+    <div class="mh"><h3 class="mt" id="mdl-title">New Job</h3><button class="mx" id="mdl-close">✕</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fgr full"><label class="fl">Title *</label><input class="fi" id="m-title" placeholder="e.g. Boys Varsity vs. Westfield"><div class="ferr" id="e-title">Title is required</div></div>
+        <div class="fgr"><label class="fl">Date *</label><input class="fi" type="date" id="m-date"><div class="ferr" id="e-date">Date is required</div></div>
+        <div class="fgr"><label class="fl">Type</label><select class="fse" id="m-type"><option>Game Coverage</option><option>Event</option><option>Tournament</option><option>Highlight Reel</option><option>Other</option></select></div>
+        <div class="fgr"><label class="fl">Start Time</label><input class="fi" type="time" id="m-start" value="09:00"></div>
+        <div class="fgr"><label class="fl">End Time</label><input class="fi" type="time" id="m-end" value="11:00"></div>
+        <div class="fgr"><label class="fl">Team</label><input class="fi" id="m-team" placeholder="e.g. Boys Varsity"></div>
+        <div class="fgr"><label class="fl">Videographer</label><select class="fse" id="m-vg"><option value="Unassigned">Unassigned</option></select></div>
+        <div class="fgr"><label class="fl">Status</label><select class="fse" id="m-status"><option>Needs Coverage</option><option>Confirmed</option><option>In Progress</option><option>Delivered</option><option>Paid</option><option>Pending Payment</option><option>Cancelled</option></select></div>
+        <div class="fgr"><label class="fl">Pay Amount ($)</label><input class="fi" type="number" id="m-pay" placeholder="0" min="0"></div>
+        <div class="fgr full"><label class="fl">Notes</label><textarea class="fta" id="m-notes" placeholder="Additional details..."></textarea></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-d" id="mdl-del" style="display:none">🗑 Delete</button>
+      <div class="mf-r">
+        <button class="btn btn-g" id="mdl-cancel">Cancel</button>
+        <button class="btn btn-p" id="mdl-save">Save Job</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- VG Modal -->
+<div id="vmo">
+  <div id="vmdl">
+    <h3>Add Videographer</h3>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="fgr"><label class="fl">Name *</label><input class="fi" id="vm-name" placeholder="Full name"><div class="ferr" id="ve-name">Name is required</div></div>
+      <div class="fgr"><label class="fl">Color</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px" id="vm-colors"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+        <button class="btn btn-g" id="vm-cancel">Cancel</button>
+        <button class="btn btn-p" id="vm-save">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Day Panel -->
+<div id="dp">
+  <div class="dph"><h4 class="dpt" id="dp-title">Day</h4><button class="mx" id="dp-close">✕</button></div>
+  <div class="dpb" id="dp-body"></div>
+</div>
+<script>
+/* ===== STATE ===== */
+const STATUSES = ['Needs Coverage','Confirmed','In Progress','Delivered','Paid','Pending Payment','Cancelled'];
+const TYPES = ['Game Coverage','Event','Tournament','Highlight Reel','Other'];
+const STATUS_COLORS = {'Needs Coverage':'#f5a623','Confirmed':'#5cb85c','In Progress':'#5b8dee','Delivered':'#5b8dee','Paid':'#5cb85c','Pending Payment':'#e05c5c','Cancelled':'#555870'};
+const STATUS_DIM = {'Needs Coverage':'rgba(245,166,35,.15)','Confirmed':'rgba(92,184,92,.15)','In Progress':'rgba(91,141,238,.15)','Delivered':'rgba(91,141,238,.15)','Paid':'rgba(92,184,92,.15)','Pending Payment':'rgba(224,92,92,.15)','Cancelled':'rgba(85,88,112,.2)'};
+const VG_COLORS = ['#5b8dee','#e05c5c','#5cb85c','#f5a623','#9b59b6','#4ecdc4','#e67e22','#1abc9c','#e74c3c','#3498db'];
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function getJobColor(job){
+  if(job.status==='Cancelled') return '#555870';
+  if(job.status==='Pending Payment') return '#e05c5c';
+  if(job.team && job.team.toLowerCase().includes('girl')) return '#9b59b6';
+  if(job.type==='Tournament'||job.type==='Event') return '#5b8dee';
+  if(job.status==='Confirmed'||job.status==='Paid') return '#5cb85c';
+  if(job.status==='Needs Coverage') return '#f5a623';
+  return STATUS_COLORS[job.status]||'#5b8dee';
+}
+function getJobDimColor(job){
+  const c=getJobColor(job);
+  const map={'#555870':'rgba(85,88,112,.18)','#e05c5c':'rgba(224,92,92,.18)','#9b59b6':'rgba(155,89,182,.18)','#5b8dee':'rgba(91,141,238,.18)','#5cb85c':'rgba(92,184,92,.18)','#f5a623':'rgba(245,166,35,.18)'};
+  return map[c]||'rgba(91,141,238,.18)';
+}
+function fmtDate(d){const o={weekday:'short',month:'short',day:'numeric'};return new Date(d+'T00:00:00').toLocaleDateString('en-US',o)}
+function fmtDateFull(d){return new Date(d+'T00:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}
+function fmtTime(t){if(!t)return'';const[h,m]=t.split(':').map(Number);const ap=h>=12?'PM':'AM';return((h%12)||12)+':'+String(m).padStart(2,'0')+ap}
+function pad2(n){return String(n).padStart(2,'0')}
+function dateStr(d){return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())}
+function sameDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate()}
+function timeToMin(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m}
+function jobsOverlap(a,b){if(a.date!==b.date||a.id===b.id)return false;const as=timeToMin(a.startTime),ae=timeToMin(a.endTime),bs=timeToMin(b.startTime),be=timeToMin(b.endTime);return as<be&&bs<ae}
+function getConflicts(jobs){
+  const conflicts=new Set();
+  for(let i=0;i<jobs.length;i++){for(let j=i+1;j<jobs.length;j++){
+    if(jobs[i].assignedVideographer&&jobs[i].assignedVideographer!=='Unassigned'&&jobs[i].assignedVideographer===jobs[j].assignedVideographer&&jobsOverlap(jobs[i],jobs[j])){
+      conflicts.add(jobs[i].id);conflicts.add(jobs[j].id);
+    }
+  }}
+  return conflicts;
+}
+
+let S = {
+  view:'month',
+  currentDate:new Date(),
+  jobs:[],
+  videographers:[],
+  filters:{status:'',vg:'',team:'',type:''},
+  rosterOpen:true,
+  editingJobId:null,
+  selectedDay:null,
+  filterVg:null
+};
+
+function loadState(){
+  try{
+    const d=localStorage.getItem('lax_portal_state');
+    if(d){const p=JSON.parse(d);S.jobs=p.jobs||[];S.videographers=p.videographers||[];return true}
+  }catch(e){}
+  return false;
+}
+function saveState(){
+  localStorage.setItem('lax_portal_state',JSON.stringify({jobs:S.jobs,videographers:S.videographers}));
+}
+
+function initSampleData(){
+  S.videographers=[
+    {id:uid(),name:'Marcus Johnson',color:'#5b8dee'},
+    {id:uid(),name:'Tyler Reed',color:'#e05c5c'},
+    {id:uid(),name:'Aiden Park',color:'#5cb85c'},
+    {id:uid(),name:'Sofia Martinez',color:'#9b59b6'}
+  ];
+  const vg=S.videographers;
+  S.jobs=[
+    {id:uid(),title:'Boys Varsity vs. Westfield',date:'2025-02-08',startTime:'10:00',endTime:'12:00',type:'Game Coverage',team:'Boys Varsity',assignedVideographer:vg[0].name,status:'Paid',payAmount:200,notes:'Home game',colorTag:''},
+    {id:uid(),title:'Girls JV vs. Summit',date:'2025-02-12',startTime:'14:00',endTime:'16:00',type:'Game Coverage',team:'Girls JV',assignedVideographer:vg[3].name,status:'Paid',payAmount:150,notes:'',colorTag:''},
+    {id:uid(),title:'Boys Varsity vs. Cranford',date:'2025-02-15',startTime:'11:00',endTime:'13:00',type:'Game Coverage',team:'Boys Varsity',assignedVideographer:vg[1].name,status:'Delivered',payAmount:200,notes:'Awaiting payment',colorTag:''},
+    {id:uid(),title:'Girls Varsity vs. Ridge',date:'2025-02-19',startTime:'15:00',endTime:'17:00',type:'Game Coverage',team:'Girls Varsity',assignedVideographer:vg[3].name,status:'Confirmed',payAmount:175,notes:'',colorTag:''},
+    {id:uid(),title:'Boys JV vs. Scotch Plains',date:'2025-02-22',startTime:'09:00',endTime:'11:00',type:'Game Coverage',team:'Boys JV',assignedVideographer:'Unassigned',status:'Needs Coverage',payAmount:150,notes:'Need someone ASAP',colorTag:''},
+    {id:uid(),title:'Highlight Reel - Season Opener',date:'2025-02-25',startTime:'18:00',endTime:'20:00',type:'Highlight Reel',team:'Boys Varsity',assignedVideographer:vg[0].name,status:'In Progress',payAmount:350,notes:'',colorTag:''},
+    {id:uid(),title:'Next Level LAX Showcase - Day 1',date:'2025-03-01',startTime:'08:00',endTime:'17:00',type:'Tournament',team:'Next Level LAX',assignedVideographer:vg[0].name,status:'Confirmed',payAmount:500,notes:'Full day coverage, 2-day event',colorTag:''},
+    {id:uid(),title:'Next Level LAX Showcase - Day 2',date:'2025-03-02',startTime:'08:00',endTime:'16:00',type:'Tournament',team:'Next Level LAX',assignedVideographer:vg[2].name,status:'Confirmed',payAmount:500,notes:'Day 2, multi-camera setup',colorTag:''},
+    {id:uid(),title:'Girls Varsity vs. Watchung',date:'2025-03-05',startTime:'16:00',endTime:'18:00',type:'Game Coverage',team:'Girls Varsity',assignedVideographer:vg[3].name,status:'Pending Payment',payAmount:175,notes:'Invoice sent 3/6',colorTag:''},
+    {id:uid(),title:'Boys Varsity vs. SPF',date:'2025-03-08',startTime:'11:00',endTime:'13:00',type:'Game Coverage',team:'Boys Varsity',assignedVideographer:vg[1].name,status:'Needs Coverage',payAmount:200,notes:'',colorTag:''},
+    {id:uid(),title:'Spring Fundraiser Event',date:'2025-03-15',startTime:'17:00',endTime:'21:00',type:'Event',team:'',assignedVideographer:vg[2].name,status:'Confirmed',payAmount:400,notes:'Evening event, bring lighting',colorTag:''},
+    {id:uid(),title:'Girls JV vs. Union',date:'2025-03-18',startTime:'14:00',endTime:'16:00',type:'Game Coverage',team:'Girls JV',assignedVideographer:'Unassigned',status:'Needs Coverage',payAmount:150,notes:'',colorTag:''},
+    {id:uid(),title:'Boys Varsity vs. Livingston',date:'2025-03-22',startTime:'10:00',endTime:'12:00',type:'Game Coverage',team:'Boys Varsity',assignedVideographer:vg[0].name,status:'Confirmed',payAmount:200,notes:'',colorTag:''},
+    {id:uid(),title:'Highlight Reel - March Madness',date:'2025-04-01',startTime:'19:00',endTime:'21:00',type:'Highlight Reel',team:'Girls Varsity',assignedVideographer:vg[1].name,status:'Needs Coverage',payAmount:300,notes:'Compilation of March games',colorTag:''},
+    {id:uid(),title:'Boys Varsity Playoff Game',date:'2025-04-12',startTime:'13:00',endTime:'15:30',type:'Game Coverage',team:'Boys Varsity',assignedVideographer:vg[0].name,status:'Confirmed',payAmount:250,notes:'If they make playoffs',colorTag:''}
+  ];
+  saveState();
+}
+
+function getFilteredJobs(){
+  let jobs=S.jobs.slice();
+  if(S.filterVg) jobs=jobs.filter(j=>j.assignedVideographer===S.filterVg);
+  if(S.filters.status) jobs=jobs.filter(j=>j.status===S.filters.status);
+  if(S.filters.vg) jobs=jobs.filter(j=>j.assignedVideographer===S.filters.vg);
+  if(S.filters.team) jobs=jobs.filter(j=>j.team===S.filters.team);
+  if(S.filters.type) jobs=jobs.filter(j=>j.type===S.filters.type);
+  return jobs;
+}
+function getJobsForDate(ds){return getFilteredJobs().filter(j=>j.date===ds)}
+function getMonthJobs(y,m){return getFilteredJobs().filter(j=>{const d=new Date(j.date+'T00:00:00');return d.getFullYear()===y&&d.getMonth()===m})}
+/* ===== RENDER ===== */
+const $=id=>document.getElementById(id);
+const conflicts=()=>getConflicts(S.jobs);
+
+function renderAll(){
+  renderFilmstrip();renderStats();renderCoverageAlert();renderRoster();renderFilterDropdowns();renderActiveFilters();renderNavLabel();renderCalendar();
+}
+
+function renderFilmstrip(){
+  const el=$('fsh');if(!el)return;let h='';for(let i=0;i<80;i++)h+='<div class="fs-hole"></div>';el.innerHTML=h;
+}
+
+function renderStats(){
+  const now=S.currentDate,y=now.getFullYear(),m=now.getMonth();
+  const mj=S.jobs.filter(j=>{const d=new Date(j.date+'T00:00:00');return d.getFullYear()===y&&d.getMonth()===m&&j.status!=='Cancelled'});
+  const rev=mj.reduce((s,j)=>s+(j.payAmount||0),0);
+  const paid=mj.filter(j=>j.status==='Paid').reduce((s,j)=>s+(j.payAmount||0),0);
+  const pend=rev-paid;
+  $('sv-j').textContent=mj.length;
+  $('ss-j').textContent=mj.filter(j=>j.status==='Confirmed'||j.status==='Paid').length+' confirmed';
+  $('sv-r').textContent='$'+rev.toLocaleString();
+  $('sv-p').textContent='$'+paid.toLocaleString();
+  $('ss-p').textContent=mj.filter(j=>j.status==='Paid').length+' jobs paid';
+  $('sv-d').textContent='$'+pend.toLocaleString();
+  $('ss-d').textContent=mj.filter(j=>j.status==='Pending Payment').length+' invoices';
+}
+
+function renderCoverageAlert(){
+  const now=new Date(),end=new Date(now);end.setDate(end.getDate()+7);
+  const needs=S.jobs.filter(j=>{const d=new Date(j.date+'T00:00:00');return d>=now&&d<=end&&(j.status==='Needs Coverage'||j.assignedVideographer==='Unassigned')&&j.status!=='Cancelled'});
+  const el=$('cov-alert'),tx=$('cov-text');
+  if(needs.length>0){el.classList.add('show');tx.textContent=needs.length+' game'+(needs.length>1?'s':'')+' need'+(needs.length===1?'s':'')+' coverage this week';}
+  else el.classList.remove('show');
+}
+
+function renderRoster(){
+  const body=$('ros-body');if(!body)return;
+  const cf=conflicts();const y=S.currentDate.getFullYear(),m=S.currentDate.getMonth();
+  let h='';
+  S.videographers.forEach(v=>{
+    const vJobs=S.jobs.filter(j=>{const d=new Date(j.date+'T00:00:00');return d.getFullYear()===y&&d.getMonth()===m&&j.assignedVideographer===v.name&&j.status!=='Cancelled'});
+    const earned=vJobs.filter(j=>j.status==='Paid').reduce((s,j)=>s+(j.payAmount||0),0);
+    const total=vJobs.reduce((s,j)=>s+(j.payAmount||0),0);
+    const paidC=vJobs.filter(j=>j.status==='Paid').length;
+    const pendC=vJobs.filter(j=>j.status!=='Paid'&&j.status!=='Cancelled').length;
+    const pct=total>0?Math.round(earned/total*100):0;
+    const isActive=S.filterVg===v.name;
+    const init=v.name.split(' ').map(w=>w[0]).join('').toUpperCase();
+    h+='<div class="vgc'+(isActive?' active':'')+'" data-vg="'+v.name+'">';
+    h+='<div class="vgc-top"><div class="vgc-dot" style="background:'+v.color+'">'+init+'</div><div class="vgc-name">'+v.name+'</div></div>';
+    h+='<div class="vgc-stats"><div class="vgc-st">Jobs: <span>'+vJobs.length+'</span></div><div class="vgc-st">Earned: <span>$'+earned+'</span></div>';
+    h+='<div class="vgc-st">Paid: <span>'+paidC+'</span></div><div class="vgc-st">Pending: <span>'+pendC+'</span></div></div>';
+    h+='<div class="vgc-bar"><div class="vgc-bar-f" style="width:'+pct+'%"></div></div></div>';
+  });
+  body.innerHTML=h;
+  body.querySelectorAll('.vgc').forEach(el=>el.addEventListener('click',()=>{
+    const name=el.dataset.vg;S.filterVg=S.filterVg===name?null:name;renderAll();
+  }));
+}
+
+function renderFilterDropdowns(){
+  const vgSel=$('f-vg'),tmSel=$('f-team');
+  const vgOpts=['<option value="">All Videographers</option>'];
+  S.videographers.forEach(v=>vgOpts.push('<option value="'+v.name+'"'+(S.filters.vg===v.name?' selected':'')+'>'+v.name+'</option>'));
+  vgSel.innerHTML=vgOpts.join('');
+  const teams=[...new Set(S.jobs.map(j=>j.team).filter(Boolean))].sort();
+  const tmOpts=['<option value="">All Teams</option>'];
+  teams.forEach(t=>tmOpts.push('<option value="'+t+'"'+(S.filters.team===t?' selected':'')+'>'+t+'</option>'));
+  tmSel.innerHTML=tmOpts.join('');
+  $('f-status').value=S.filters.status||'';
+  $('f-type').value=S.filters.type||'';
+}
+
+function renderActiveFilters(){
+  const el=$('af-chips'),clr=$('btn-clr');let h='';let any=false;
+  if(S.filterVg){h+='<span class="af-chip">👤 '+S.filterVg+'<button onclick="S.filterVg=null;renderAll()">✕</button></span>';any=true;}
+  Object.entries(S.filters).forEach(([k,v])=>{if(v){h+='<span class="af-chip">'+k+': '+v+'<button onclick="S.filters.'+k+'=\'\';renderAll()">✕</button></span>';any=true;}});
+  el.innerHTML=h;clr.style.display=any?'inline':'none';
+}
+
+function renderNavLabel(){
+  const d=S.currentDate,mo=d.toLocaleString('en-US',{month:'long'}),yr=d.getFullYear();
+  if(S.view==='month') $('nav-label').textContent=mo+' '+yr;
+  else if(S.view==='week'){
+    const start=getWeekStart(d),end=new Date(start);end.setDate(end.getDate()+6);
+    $('nav-label').textContent=start.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' – '+end.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  } else $('nav-label').textContent=mo+' '+yr;
+}
+
+function getWeekStart(d){const dt=new Date(d);const day=dt.getDay();const diff=day===0?-6:1-day;dt.setDate(dt.getDate()+diff);return dt}
+
+function renderCalendar(){
+  const el=$('cal');if(!el)return;
+  if(S.view==='month') renderMonth(el);
+  else if(S.view==='week') renderWeek(el);
+  else renderList(el);
+}
+
+function renderMonth(el){
+  const d=S.currentDate,y=d.getFullYear(),m=d.getMonth();
+  const first=new Date(y,m,1),last=new Date(y,m+1,0);
+  const startDay=first.getDay()||7;
+  const cf=conflicts();
+  const today=new Date();
+  let h='<div class="mgrid">';
+  ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(d=>h+='<div class="mhdr">'+d+'</div>');
+  const startDate=new Date(first);startDate.setDate(startDate.getDate()-(startDay-1));
+  for(let i=0;i<42;i++){
+    const cur=new Date(startDate);cur.setDate(startDate.getDate()+i);
+    const ds=dateStr(cur);
+    const isOther=cur.getMonth()!==m;
+    const isToday=sameDay(cur,today);
+    const dayJobs=getJobsForDate(ds);
+    h+='<div class="mday'+(isOther?' om':'')+(isToday?' today':'')+'" data-date="'+ds+'">';
+    h+='<div class="dnum">'+cur.getDate()+'</div>';
+    const show=dayJobs.slice(0,3);
+    show.forEach(j=>{
+      const c=getJobColor(j);const hasCf=cf.has(j.id);
+      h+='<div class="dpill" style="background:'+c+'" data-id="'+j.id+'" title="'+(hasCf?'⚠ Schedule conflict\n':'')+j.title+'">'+(hasCf?'⚠ ':'')+j.title+'</div>';
+    });
+    if(dayJobs.length>3) h+='<div class="dmore">+'+(dayJobs.length-3)+' more</div>';
+    h+='</div>';
+  }
+  h+='</div>';
+  el.innerHTML=h;
+  el.querySelectorAll('.mday').forEach(d=>d.addEventListener('click',e=>{
+    if(e.target.classList.contains('dpill')){openEditModal(e.target.dataset.id);return;}
+    if(e.target.classList.contains('dmore')){openDayPanel(d.dataset.date);return;}
+    openDayPanel(d.dataset.date);
+  }));
+}
+
+function renderWeek(el){
+  const start=getWeekStart(S.currentDate);
+  const cf=conflicts();const today=new Date();
+  let h='<div class="ww"><div class="wtc"><div class="wth"></div>';
+  for(let hr=6;hr<=22;hr++) h+='<div class="wts">'+fmtTime(pad2(hr)+':00')+'</div>';
+  h+='</div>';
+  for(let d=0;d<7;d++){
+    const cur=new Date(start);cur.setDate(start.getDate()+d);
+    const ds=dateStr(cur);const isToday=sameDay(cur,today);
+    const dayJobs=getJobsForDate(ds);
+    h+='<div class="wdc" style="border-left:1px solid var(--border)">';
+    h+='<div class="wdh'+(isToday?' today':'')+'" data-date="'+ds+'"><div class="wdn">'+cur.toLocaleDateString('en-US',{weekday:'short'})+'</div><div class="wdd">'+cur.getDate()+'</div></div>';
+    h+='<div class="wsa">';
+    for(let hr=6;hr<=22;hr++) h+='<div class="wsbg"></div>';
+    dayJobs.forEach(j=>{
+      const s=timeToMin(j.startTime||'09:00'),e=timeToMin(j.endTime||'11:00');
+      const top=((s-360)/60)*48,height=Math.max(((e-s)/60)*48,20);
+      const c=getJobColor(j);const hasCf=cf.has(j.id);
+      h+='<div class="wev" style="top:'+top+'px;height:'+height+'px;background:'+c+'" data-id="'+j.id+'" title="'+(hasCf?'⚠ Conflict\n':'')+j.title+'">';
+      h+='<div class="wet">'+(hasCf?'⚠ ':'')+j.title+'</div>';
+      h+='<div class="weti">'+fmtTime(j.startTime)+' – '+fmtTime(j.endTime)+'</div></div>';
+    });
+    h+='</div></div>';
+  }
+  h+='</div>';
+  el.innerHTML=h;
+  el.querySelectorAll('.wev').forEach(e=>e.addEventListener('click',()=>openEditModal(e.dataset.id)));
+  el.querySelectorAll('.wdh').forEach(e=>e.addEventListener('click',()=>openDayPanel(e.dataset.date)));
+}
+
+function renderList(el){
+  const jobs=getFilteredJobs().sort((a,b)=>a.date.localeCompare(b.date)||a.startTime.localeCompare(b.startTime));
+  if(!jobs.length){el.innerHTML='<div class="empty"><div class="empty-i">📭</div><div class="empty-t">No jobs match your filters</div></div>';return;}
+  const cf=conflicts();const today=new Date();const groups={};
+  jobs.forEach(j=>{if(!groups[j.date])groups[j.date]=[];groups[j.date].push(j)});
+  let h='';
+  Object.keys(groups).sort().forEach(date=>{
+    const isToday=sameDay(new Date(date+'T00:00:00'),today);
+    h+='<div class="lg"><div class="ldh"><span class="ldl">'+fmtDate(date)+'</span><div class="ldline"></div>'+(isToday?'<span class="tbd">TODAY</span>':'')+'</div>';
+    groups[date].forEach(j=>{
+      const c=getJobColor(j);const hasCf=cf.has(j.id);
+      h+='<div class="jc" data-id="'+j.id+'">';
+      h+='<div class="jcb" style="background:'+c+'"></div>';
+      h+='<div class="jcm"><div class="jct">'+j.title+(hasCf?' <span class="cfb">⚠ Conflict</span>':'')+'</div>';
+      h+='<div class="jcmeta">';
+      h+='<span class="jcmi">🕐 '+fmtTime(j.startTime)+' – '+fmtTime(j.endTime)+'</span>';
+      if(j.team) h+='<span class="jcmi">🏈 '+j.team+'</span>';
+      h+='<span class="jcmi">🎬 '+j.type+'</span>';
+      if(j.assignedVideographer&&j.assignedVideographer!=='Unassigned') h+='<span class="jcmi">👤 '+j.assignedVideographer+'</span>';
+      h+='</div>';
+      h+=renderPaymentTimeline(j);
+      h+='</div><div class="jcr">';
+      h+='<span class="sbadge" style="background:'+STATUS_DIM[j.status]+';color:'+STATUS_COLORS[j.status]+'">'+j.status+'</span>';
+      if(j.payAmount) h+='<span class="payamt">$'+j.payAmount+'</span>';
+      h+='</div></div>';
+    });
+    h+='</div>';
+  });
+  el.innerHTML=h;
+  el.querySelectorAll('.jc').forEach(e=>e.addEventListener('click',()=>openEditModal(e.dataset.id)));
+}
+
+function renderPaymentTimeline(j){
+  const steps=[{label:'Delivered',done:['Delivered','Paid','Pending Payment'].includes(j.status)},{label:'Invoiced',done:['Paid','Pending Payment'].includes(j.status)},{label:'Paid',done:j.status==='Paid'}];
+  if(j.status==='Needs Coverage'||j.status==='Confirmed'||j.status==='In Progress'||j.status==='Cancelled')return'';
+  let h='<div class="ptl">';
+  steps.forEach((s,i)=>{
+    h+='<span class="pts'+(s.done?' dn':'')+((!s.done&&i>0&&steps[i-1].done)?' ac':'')+'">'+(s.done?'✓':'○')+' '+s.label+'</span>';
+    if(i<steps.length-1) h+='<span class="pta">→</span>';
+  });
+  return h+'</div>';
+}
+/* ===== MODALS & EVENTS ===== */
+function openNewModal(date){
+  S.editingJobId=null;
+  $('mdl-title').textContent='New Job';
+  $('m-title').value='';$('m-date').value=date||dateStr(new Date());
+  $('m-start').value='09:00';$('m-end').value='11:00';
+  $('m-type').value='Game Coverage';$('m-team').value='';
+  $('m-status').value='Needs Coverage';$('m-pay').value='';$('m-notes').value='';
+  populateVgSelect();$('m-vg').value='Unassigned';
+  $('mdl-del').style.display='none';
+  clearFormErrors();
+  $('mo').classList.add('open');
+}
+
+function openEditModal(id){
+  const j=S.jobs.find(x=>x.id===id);if(!j)return;
+  S.editingJobId=id;
+  $('mdl-title').textContent='Edit Job';
+  $('m-title').value=j.title;$('m-date').value=j.date;
+  $('m-start').value=j.startTime||'09:00';$('m-end').value=j.endTime||'11:00';
+  $('m-type').value=j.type;$('m-team').value=j.team||'';
+  $('m-status').value=j.status;$('m-pay').value=j.payAmount||'';$('m-notes').value=j.notes||'';
+  populateVgSelect();$('m-vg').value=j.assignedVideographer||'Unassigned';
+  $('mdl-del').style.display='inline-flex';
+  clearFormErrors();
+  $('mo').classList.add('open');
+}
+
+function closeModal(){$('mo').classList.remove('open');S.editingJobId=null}
+
+function populateVgSelect(){
+  let h='<option value="Unassigned">Unassigned</option>';
+  S.videographers.forEach(v=>h+='<option value="'+v.name+'">'+v.name+'</option>');
+  $('m-vg').innerHTML=h;
+}
+
+function clearFormErrors(){
+  document.querySelectorAll('.ferr').forEach(e=>e.classList.remove('show'));
+}
+
+function saveJob(){
+  clearFormErrors();let valid=true;
+  const title=$('m-title').value.trim();
+  const date=$('m-date').value;
+  if(!title){$('e-title').classList.add('show');valid=false}
+  if(!date){$('e-date').classList.add('show');valid=false}
+  if(!valid)return;
+  const data={
+    title,date,
+    startTime:$('m-start').value,endTime:$('m-end').value,
+    type:$('m-type').value,team:$('m-team').value.trim(),
+    assignedVideographer:$('m-vg').value,
+    status:$('m-status').value,
+    payAmount:parseFloat($('m-pay').value)||0,
+    notes:$('m-notes').value.trim(),
+    colorTag:''
+  };
+  if(S.editingJobId){
+    const idx=S.jobs.findIndex(j=>j.id===S.editingJobId);
+    if(idx>=0) S.jobs[idx]={...S.jobs[idx],...data};
+  } else {
+    S.jobs.push({id:uid(),...data});
+  }
+  saveState();closeModal();renderAll();
+}
+
+function deleteJob(){
+  if(!S.editingJobId)return;
+  if(!confirm('Delete this job?'))return;
+  S.jobs=S.jobs.filter(j=>j.id!==S.editingJobId);
+  saveState();closeModal();renderAll();
+}
+
+function openDayPanel(ds){
+  S.selectedDay=ds;
+  $('dp-title').textContent=fmtDateFull(ds);
+  const jobs=getJobsForDate(ds).sort((a,b)=>(a.startTime||'').localeCompare(b.startTime||''));
+  let h='';
+  if(!jobs.length) h='<div style="color:var(--text3);font-size:.82rem;padding:20px;text-align:center">No jobs this day</div>';
+  jobs.forEach(j=>{
+    const c=getJobColor(j);
+    h+='<div class="dpj" style="border-left-color:'+c+'" data-id="'+j.id+'">';
+    h+='<div class="dpjt">'+j.title+'</div>';
+    h+='<div class="dpjm">'+fmtTime(j.startTime)+' – '+fmtTime(j.endTime);
+    if(j.assignedVideographer&&j.assignedVideographer!=='Unassigned') h+=' · '+j.assignedVideographer;
+    h+='</div><div class="dpjm" style="margin-top:3px"><span class="sbadge" style="background:'+STATUS_DIM[j.status]+';color:'+STATUS_COLORS[j.status]+'">'+j.status+'</span></div>';
+    h+='</div>';
+  });
+  h+='<button class="btn btn-p" style="width:100%;margin-top:10px" onclick="closeDayPanel();openNewModal(\''+ds+'\')">＋ Add Job</button>';
+  $('dp-body').innerHTML=h;
+  $('dp').classList.add('open');
+  $('dp-body').querySelectorAll('.dpj').forEach(e=>e.addEventListener('click',()=>{closeDayPanel();openEditModal(e.dataset.id)}));
+}
+
+function closeDayPanel(){$('dp').classList.remove('open');S.selectedDay=null}
+
+function openVgModal(){
+  $('vm-name').value='';
+  document.querySelectorAll('#ve-name').forEach(e=>e.classList.remove('show'));
+  const colEl=$('vm-colors');let h='';
+  VG_COLORS.forEach((c,i)=>h+='<div style="width:24px;height:24px;border-radius:50%;background:'+c+';cursor:pointer;border:2px solid '+(i===0?'#fff':'transparent')+';transition:all .2s" data-color="'+c+'" class="vmc'+(i===0?' sel':'')+'"></div>');
+  colEl.innerHTML=h;
+  colEl.querySelectorAll('[data-color]').forEach(el=>el.addEventListener('click',()=>{
+    colEl.querySelectorAll('[data-color]').forEach(x=>{x.style.borderColor='transparent';x.classList.remove('sel')});
+    el.style.borderColor='#fff';el.classList.add('sel');
+  }));
+  $('vmo').classList.add('open');
+}
+
+function closeVgModal(){$('vmo').classList.remove('open')}
+
+function saveVg(){
+  const name=$('vm-name').value.trim();
+  if(!name){$('ve-name').classList.add('show');return}
+  const selColor=document.querySelector('.vmc.sel');
+  const color=selColor?selColor.dataset.color:VG_COLORS[Math.floor(Math.random()*VG_COLORS.length)];
+  S.videographers.push({id:uid(),name,color});
+  saveState();closeVgModal();renderAll();
+}
+
+function exportCSV(){
+  const headers=['Title','Date','Start','End','Type','Team','Videographer','Status','Pay','Notes'];
+  let csv=headers.join(',')+'\n';
+  S.jobs.forEach(j=>{
+    csv+=[j.title,j.date,j.startTime,j.endTime,j.type,j.team||'',j.assignedVideographer||'',j.status,j.payAmount||0,'"'+(j.notes||'').replace(/"/g,'""')+'"'].join(',')+'\n';
+  });
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='lax_jobs_export.csv';a.click();
+}
+
+function navigate(dir){
+  const d=S.currentDate;
+  if(S.view==='month') d.setMonth(d.getMonth()+dir);
+  else if(S.view==='week') d.setDate(d.getDate()+dir*7);
+  else d.setMonth(d.getMonth()+dir);
+  renderAll();
+}
+
+function goToday(){S.currentDate=new Date();renderAll()}
+
+/* ===== INIT ===== */
+function init(){
+  if(!loadState()) initSampleData();
+
+  // Film strip
+  renderAll();
+
+  // View tabs
+  document.querySelectorAll('.vtab').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('.vtab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');S.view=t.dataset.view;renderNavLabel();renderCalendar();
+  }));
+
+  // Navigation
+  $('nav-prev').addEventListener('click',()=>navigate(-1));
+  $('nav-next').addEventListener('click',()=>navigate(1));
+  $('nav-today').addEventListener('click',goToday);
+
+  // Roster toggle
+  $('ros-tog').addEventListener('click',()=>{
+    const r=$('roster');r.classList.toggle('collapsed');S.rosterOpen=!r.classList.contains('collapsed');
+  });
+
+  // Filters
+  ['f-status','f-vg','f-team','f-type'].forEach(id=>{
+    $(id).addEventListener('change',()=>{
+      const map={'f-status':'status','f-vg':'vg','f-team':'team','f-type':'type'};
+      S.filters[map[id]]=$(id).value;renderAll();
+    });
+  });
+  $('btn-clr').addEventListener('click',()=>{
+    S.filters={status:'',vg:'',team:'',type:''};S.filterVg=null;renderAll();
+  });
+
+  // Modal buttons
+  $('btn-new').addEventListener('click',()=>openNewModal());
+  $('mdl-close').addEventListener('click',closeModal);
+  $('mdl-cancel').addEventListener('click',closeModal);
+  $('mdl-save').addEventListener('click',saveJob);
+  $('mdl-del').addEventListener('click',deleteJob);
+  $('mo').addEventListener('click',e=>{if(e.target===$('mo'))closeModal()});
+
+  // VG Modal
+  $('btn-addvg').addEventListener('click',openVgModal);
+  $('vm-cancel').addEventListener('click',closeVgModal);
+  $('vm-save').addEventListener('click',saveVg);
+  $('vmo').addEventListener('click',e=>{if(e.target===$('vmo'))closeVgModal()});
+
+  // Day panel
+  $('dp-close').addEventListener('click',closeDayPanel);
+
+  // Export
+  $('btn-exp').addEventListener('click',exportCSV);
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown',e=>{
+    if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
+    if(e.key==='n'||e.key==='N') openNewModal();
+    if(e.key==='Escape'){closeModal();closeVgModal();closeDayPanel()}
+  });
+}
+
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

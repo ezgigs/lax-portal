@@ -457,15 +457,17 @@ let S = {
 /* ===== SUPABASE ===== */
 const SUPABASE_URL='https://vxejfbsuwuojghyckmus.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4ZWpmYnN1d3VvamdoeWNrbXVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MzczOTcsImV4cCI6MjA4NzExMzM5N30.kiXFHTXIrBKsy75mEs2xbDlUU0_WYbifigVElweHU3s';
-const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let supabase=null;
 
 async function loadState(){
+  if(!supabase) return false;
   try{
     const [jobsRes,vgRes,notifRes]=await Promise.all([
       supabase.from('jobs').select('*').order('date',{ascending:true}),
       supabase.from('videographers').select('*'),
       supabase.from('notifications').select('*').order('time',{ascending:false}).limit(50)
     ]);
+    if(jobsRes.error) throw jobsRes.error;
     if(jobsRes.data) S.jobs=jobsRes.data.map(j=>({
       id:j.id,title:j.title,date:j.date,startTime:j.start_time,endTime:j.end_time,
       type:j.type,team:j.team,assignedVideographer:j.assigned_videographer,
@@ -476,40 +478,47 @@ async function loadState(){
       id:n.id,jobTitle:n.job_title,note:n.note,vg:n.vg,time:n.time,read:n.read
     }));
     return true;
-  }catch(e){console.error('Load error:',e);return false;}
+  }catch(e){console.error('Supabase load error:',e);return false;}
 }
 
 async function saveJob(jobData){
+  if(!supabase) return;
   const row={
     id:jobData.id,title:jobData.title,date:jobData.date,
     start_time:jobData.startTime,end_time:jobData.endTime,
-    type:jobData.type,team:jobData.team,
-    assigned_videographer:jobData.assignedVideographer,
-    status:jobData.status,pay_amount:jobData.payAmount,
-    notes:jobData.notes,color_tag:jobData.colorTag
+    type:jobData.type,team:jobData.team||'',
+    assigned_videographer:jobData.assignedVideographer||'Unassigned',
+    status:jobData.status,pay_amount:jobData.payAmount||0,
+    notes:jobData.notes||'',color_tag:jobData.colorTag||''
   };
-  await supabase.from('jobs').upsert(row);
+  const {error}=await supabase.from('jobs').upsert(row);
+  if(error) console.error('saveJob error:',error);
 }
 
 async function deleteJobFromDB(id){
+  if(!supabase) return;
   await supabase.from('jobs').delete().eq('id',id);
 }
 
 async function saveVideographer(vg){
+  if(!supabase) return;
   await supabase.from('videographers').upsert(vg);
 }
 
 async function saveNotification(n){
+  if(!supabase) return;
   await supabase.from('notifications').upsert({
     id:n.id,job_title:n.jobTitle,note:n.note,vg:n.vg,time:n.time,read:n.read
   });
 }
 
 async function clearAllJobs(){
+  if(!supabase) return;
   await supabase.from('jobs').delete().neq('id','__none__');
 }
 
 async function clearAllNotifications(){
+  if(!supabase) return;
   await supabase.from('notifications').delete().neq('id','__none__');
 }
 
@@ -1217,6 +1226,13 @@ function goToday(){S.currentDate=new Date();renderAll()}
 
 /* ===== INIT ===== */
 async function init(){
+  // Init Supabase after DOM/scripts are ready
+  try{
+    if(window.supabase && window.supabase.createClient){
+      supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+    }
+  }catch(e){console.error('Supabase init failed:',e);}
+
   await loadState();
 
   // Film strip

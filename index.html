@@ -52,6 +52,16 @@ h1,h2,h3,h4,h5{font-family:'Space Grotesk',sans-serif}button{cursor:pointer;font
 .vgc{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);padding:11px;cursor:pointer;transition:all var(--t)}
 .vgc:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:var(--sh)}
 .vgc.active{border-color:var(--accent);background:var(--accentd)}
+.vgc.assign-mode{border-color:var(--green);background:rgba(166,227,161,.15);box-shadow:0 0 12px rgba(166,227,161,.3)}
+.vgc .assign-badge{display:none;font-size:.6rem;background:var(--green);color:#0f1117;padding:1px 6px;border-radius:8px;font-weight:700;margin-left:auto}
+.vgc.assign-mode .assign-badge{display:inline-block}
+#assign-banner{display:none;background:linear-gradient(90deg,rgba(166,227,161,.15),rgba(137,180,250,.1));border:1px solid rgba(166,227,161,.3);border-radius:var(--rs);padding:8px 14px;margin:0 18px 8px;font-size:.78rem;color:var(--green);font-weight:600;align-items:center;gap:8px;animation:fadeIn .2s ease}
+#assign-banner.show{display:flex}
+#assign-banner button{background:rgba(243,139,168,.15);border:1px solid rgba(243,139,168,.3);color:var(--red);font-size:.7rem;padding:3px 10px;border-radius:var(--rs);margin-left:auto;cursor:pointer;transition:all var(--t)}
+#assign-banner button:hover{background:rgba(243,139,168,.3)}
+.dpill.assignable{animation:pulse-assign 1.2s ease infinite;cursor:pointer;outline:2px solid transparent;outline-offset:1px}
+.dpill.assignable:hover{outline-color:var(--green);filter:brightness(1.4)!important}
+@keyframes pulse-assign{0%,100%{opacity:1}50%{opacity:.6}}
 .vgc-top{display:flex;align-items:center;gap:9px;margin-bottom:8px}
 .vgc-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;color:#fff;flex-shrink:0}
 .vgc-name{font-weight:600;font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -271,6 +281,7 @@ h1,h2,h3,h4,h5{font-family:'Space Grotesk',sans-serif}button{cursor:pointer;font
         <div id="af-chips"></div>
         <button class="btn-clr" id="btn-clr" style="display:none">✕ Clear All</button>
       </div>
+      <div id="assign-banner"><span id="assign-text">🎯 Assign mode</span><button id="assign-exit">✕ Exit</button></div>
       <div id="cal"></div>
     </main>
   </div>
@@ -451,7 +462,8 @@ let S = {
   editingJobId:null,
   selectedDay:null,
   filterVg:null,
-  notifications:[]
+  notifications:[],
+  assignMode:null
 };
 
 /* ===== SUPABASE ===== */
@@ -594,6 +606,14 @@ const conflicts=()=>getConflicts(S.jobs);
 
 function renderAll(){
   renderFilmstrip();renderStats();renderCoverageAlert();renderRoster();renderFilterDropdowns();renderActiveFilters();renderNavLabel();renderCalendar();
+  const banner=$('assign-banner');
+  if(S.assignMode){
+    const unassigned=S.jobs.filter(j=>(!j.assignedVideographer||j.assignedVideographer==='Unassigned')&&j.status!=='Cancelled').length;
+    $('assign-text').textContent='🎯 Assign mode: Click unassigned games to assign to '+S.assignMode+' ('+unassigned+' available)';
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
 }
 
 function renderFilmstrip(){
@@ -635,17 +655,34 @@ function renderRoster(){
     const pendC=vJobs.filter(j=>j.status!=='Paid'&&j.status!=='Cancelled').length;
     const pct=total>0?Math.round(earned/total*100):0;
     const isActive=S.filterVg===v.name;
+    const isAssigning=S.assignMode===v.name;
     const init=v.name.split(' ').map(w=>w[0]).join('').toUpperCase();
-    h+='<div class="vgc'+(isActive?' active':'')+'" data-vg="'+v.name+'">';
-    h+='<div class="vgc-top"><div class="vgc-dot" style="background:'+v.color+'">'+init+'</div><div class="vgc-name">'+v.name+'</div></div>';
+    h+='<div class="vgc'+(isActive?' active':'')+(isAssigning?' assign-mode':'')+'" data-vg="'+v.name+'">';
+    h+='<div class="vgc-top"><div class="vgc-dot" style="background:'+v.color+'">'+init+'</div><div class="vgc-name">'+v.name+'</div><span class="assign-badge">ASSIGNING</span></div>';
     h+='<div class="vgc-stats"><div class="vgc-st">Jobs: <span>'+vJobs.length+'</span></div><div class="vgc-st">Earned: <span>$'+earned+'</span></div>';
     h+='<div class="vgc-st">Paid: <span>'+paidC+'</span></div><div class="vgc-st">Pending: <span>'+pendC+'</span></div></div>';
     h+='<div class="vgc-bar"><div class="vgc-bar-f" style="width:'+pct+'%"></div></div></div>';
   });
   body.innerHTML=h;
-  body.querySelectorAll('.vgc').forEach(el=>el.addEventListener('click',()=>{
-    const name=el.dataset.vg;S.filterVg=S.filterVg===name?null:name;renderAll();
-  }));
+  body.querySelectorAll('.vgc').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const name=el.dataset.vg;
+      if(S.assignMode){
+        // If already in assign mode, clicking any card exits or switches
+        S.assignMode=S.assignMode===name?null:name;
+      } else {
+        S.filterVg=S.filterVg===name?null:name;
+      }
+      renderAll();
+    });
+    el.addEventListener('dblclick',(e)=>{
+      e.preventDefault();
+      const name=el.dataset.vg;
+      S.assignMode=S.assignMode===name?null:name;
+      S.filterVg=null;
+      renderAll();
+    });
+  });
 }
 
 function renderFilterDropdowns(){
@@ -706,7 +743,8 @@ function renderMonth(el){
     const show=dayJobs.slice(0,3);
     show.forEach(j=>{
       const c=getJobColor(j);const hasCf=cf.has(j.id);
-      h+='<div class="dpill" style="background:'+c+'" data-id="'+j.id+'" title="'+(hasCf?'⚠ Schedule conflict\n':'')+j.title+'">'+(hasCf?'⚠ ':'')+j.title+'</div>';
+      const canAssign=S.assignMode&&(!j.assignedVideographer||j.assignedVideographer==='Unassigned')&&j.status!=='Cancelled';
+      h+='<div class="dpill'+(canAssign?' assignable':'')+'" style="background:'+c+'" data-id="'+j.id+'" title="'+(canAssign?'Click to assign '+S.assignMode:((hasCf?'⚠ Schedule conflict\n':'')+j.title))+'">'+(hasCf?'⚠ ':'')+j.title+'</div>';
     });
     if(dayJobs.length>3) h+='<div class="dmore">+'+(dayJobs.length-3)+' more</div>';
     h+='</div>';
@@ -714,9 +752,14 @@ function renderMonth(el){
   h+='</div>';
   el.innerHTML=h;
   el.querySelectorAll('.mday').forEach(d=>d.addEventListener('click',e=>{
-    if(e.target.classList.contains('dpill')){openEditModal(e.target.dataset.id);return;}
+    if(e.target.classList.contains('dpill')){
+      if(S.assignMode&&e.target.classList.contains('assignable')){
+        assignVgToJob(e.target.dataset.id,S.assignMode);return;
+      }
+      openEditModal(e.target.dataset.id);return;
+    }
     if(e.target.classList.contains('dmore')){openDayPanel(d.dataset.date);return;}
-    openDayPanel(d.dataset.date);
+    if(!S.assignMode) openDayPanel(d.dataset.date);
   }));
 }
 
@@ -738,7 +781,8 @@ function renderWeek(el){
       const s=timeToMin(j.startTime||'09:00'),e=timeToMin(j.endTime||'11:00');
       const top=((s-360)/60)*48,height=Math.max(((e-s)/60)*48,20);
       const c=getJobColor(j);const hasCf=cf.has(j.id);
-      h+='<div class="wev" style="top:'+top+'px;height:'+height+'px;background:'+c+'" data-id="'+j.id+'" title="'+(hasCf?'⚠ Conflict\n':'')+j.title+'">';
+      const canAssign=S.assignMode&&(!j.assignedVideographer||j.assignedVideographer==='Unassigned')&&j.status!=='Cancelled';
+      h+='<div class="wev'+(canAssign?' assignable':'')+'" style="top:'+top+'px;height:'+height+'px;background:'+c+'" data-id="'+j.id+'" title="'+(canAssign?'Click to assign '+S.assignMode:((hasCf?'⚠ Conflict\n':'')+j.title))+'">';
       h+='<div class="wet">'+(hasCf?'⚠ ':'')+j.title+'</div>';
       h+='<div class="weti">'+fmtTime(j.startTime)+' – '+fmtTime(j.endTime)+'</div></div>';
     });
@@ -746,8 +790,11 @@ function renderWeek(el){
   }
   h+='</div>';
   el.innerHTML=h;
-  el.querySelectorAll('.wev').forEach(e=>e.addEventListener('click',()=>openEditModal(e.dataset.id)));
-  el.querySelectorAll('.wdh').forEach(e=>e.addEventListener('click',()=>openDayPanel(e.dataset.date)));
+  el.querySelectorAll('.wev').forEach(e=>e.addEventListener('click',()=>{
+    if(S.assignMode&&e.classList.contains('assignable')){assignVgToJob(e.dataset.id,S.assignMode);return;}
+    openEditModal(e.dataset.id);
+  }));
+  el.querySelectorAll('.wdh').forEach(e=>e.addEventListener('click',()=>{if(!S.assignMode)openDayPanel(e.dataset.date)}));
 }
 
 function renderList(el){
@@ -827,6 +874,17 @@ function populateVgSelect(){
   S.videographers.forEach(v=>h+='<option value="'+v.name+'">'+v.name+'</option>');
   $('m-vg').innerHTML=h;
 }
+
+async function assignVgToJob(jobId,vgName){
+  const idx=S.jobs.findIndex(j=>j.id===jobId);
+  if(idx<0)return;
+  S.jobs[idx].assignedVideographer=vgName;
+  if(S.jobs[idx].status==='Needs Coverage') S.jobs[idx].status='Pending Payment';
+  await saveJob(S.jobs[idx]);
+  renderAll();
+}
+
+function exitAssignMode(){S.assignMode=null;renderAll();}
 
 function clearFormErrors(){
   document.querySelectorAll('.ferr').forEach(e=>e.classList.remove('show'));
@@ -1279,6 +1337,20 @@ async function init(){
   $('mdl-save').addEventListener('click',saveJobModal);
   $('mdl-del').addEventListener('click',deleteJob);
   $('mo').addEventListener('click',e=>{if(e.target===$('mo'))closeModal()});
+
+  // Auto-set status when VG is assigned in modal
+  $('m-vg').addEventListener('change',()=>{
+    const vg=$('m-vg').value;
+    const status=$('m-status').value;
+    if(vg&&vg!=='Unassigned'&&status==='Needs Coverage'){
+      $('m-status').value='Pending Payment';
+    } else if(vg==='Unassigned'&&status==='Pending Payment'){
+      $('m-status').value='Needs Coverage';
+    }
+  });
+
+  // Assign mode exit
+  $('assign-exit').addEventListener('click',exitAssignMode);
 
   // VG Modal
   $('btn-addvg').addEventListener('click',openVgModal);

@@ -430,6 +430,7 @@ const VG_COLORS = ['#5b8dee','#e05c5c','#5cb85c','#f5a623','#9b59b6','#4ecdc4','
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function getJobColor(job){
+  if(job.colorTag) return job.colorTag;
   if(job.status==='Cancelled') return '#555870';
   if(job.status==='Pending Payment') return '#e05c5c';
   if(job.team && job.team.toLowerCase().includes('girl')) return '#9b59b6';
@@ -1288,20 +1289,30 @@ function parseSchedule(){
     return;
   }
   $('parse-count').textContent=results.length;
+  const palette=COLOR_PALETTE.map(c=>c.color);
+  const dayColorMap={};
+  results.forEach(r=>{
+    const arr=dayColorMap[r.date]||[];
+    const color=palette[arr.length%palette.length];
+    arr.push(color);
+    dayColorMap[r.date]=arr;
+    r.colorTag=color;
+  });
   let rows='';
   const statusOpts=STATUSES.map(s=>`<option>${s}</option>`).join('');
   const vgOpts='<option value="Unassigned">Unassigned</option>'+S.videographers.map(v=>`<option value="${v.name}">${v.name}</option>`).join('');
   results.forEach((r,i)=>{
     const st=overrideStart||r.startTime;
     const et=overrideEnd||r.endTime;
-    rows+=`<tr data-idx="${i}" data-avail="" data-color="" data-status="Needs Coverage">
+    const color=r.colorTag||'';
+    rows+=`<tr data-idx="${i}" data-avail="" data-color="${color}" data-status="Needs Coverage">
       <td><input class="pi" data-field="title" value="${r.title.replace(/"/g,'&quot;')}" style="min-width:150px"></td>
       <td><input class="pi" data-field="date" type="date" value="${r.date}" style="min-width:105px"></td>
       <td><input class="pi" data-field="startTime" type="time" value="${st}"></td>
       <td><input class="pi" data-field="endTime" type="time" value="${et}"></td>
       <td><select class="ps" data-field="status" style="min-width:100px">${statusOpts}</select></td>
       <td><select class="ps" data-field="vg" style="min-width:100px">${vgOpts}</select></td>
-      <td><div class="color-preview" style="width:18px;height:18px;border-radius:50%;background:var(--border);border:2px solid var(--border2);cursor:default"></div></td>
+      <td><div class="color-preview" style="width:18px;height:18px;border-radius:50%;background:${color||'var(--border)'};border:2px solid ${color||'var(--border2)'};cursor:default"></div></td>
       <td><div class="avail-chips">${makeAvailChips(i)}</div></td>
       <td><button class="row-del" title="Remove">✕</button></td>
     </tr>`;

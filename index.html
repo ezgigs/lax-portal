@@ -150,6 +150,14 @@ h1,h2,h3,h4,h5{font-family:'Space Grotesk',sans-serif}button{cursor:pointer;font
 .fi:focus,.fse:focus,.fta:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(137,180,250,.12)}
 .fse{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239499b0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;background-color:var(--card2)}
 .fta{resize:vertical;min-height:70px}
+.vg-multi{position:relative}
+.vg-multi-display{background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--rs);padding:9px 28px 9px 12px;font-size:.85rem;cursor:pointer;transition:all var(--t);min-height:38px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239499b0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.vg-multi-display:hover{border-color:var(--border2)}
+.vg-multi-dd{display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border2);border-radius:var(--rs);margin-top:4px;max-height:180px;overflow-y:auto;z-index:20;box-shadow:var(--sh);padding:4px 0}
+.vg-multi-dd.open{display:block}
+.vg-multi-dd label{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:.82rem;cursor:pointer;transition:background var(--t)}
+.vg-multi-dd label:hover{background:var(--card2)}
+.vg-multi-dd input[type=checkbox]{accent-color:var(--green);width:15px;height:15px;cursor:pointer}
 .ferr{font-size:.72rem;color:var(--red);margin-top:2px;display:none}.ferr.show{display:block}
 .mf{padding:14px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;bottom:0;background:var(--card);border-radius:0 0 14px 14px}
 .mf-r{display:flex;gap:8px}
@@ -298,7 +306,7 @@ h1,h2,h3,h4,h5{font-family:'Space Grotesk',sans-serif}button{cursor:pointer;font
         <div class="fgr"><label class="fl">Start Time</label><input class="fi" type="time" id="m-start" value="09:00"></div>
         <div class="fgr"><label class="fl">End Time</label><input class="fi" type="time" id="m-end" value="11:00"></div>
         <div class="fgr"><label class="fl">Team</label><input class="fi" id="m-team" placeholder="e.g. Boys Varsity"></div>
-        <div class="fgr"><label class="fl">Videographer</label><select class="fse" id="m-vg"><option value="Unassigned">Unassigned</option></select></div>
+        <div class="fgr"><label class="fl">Videographer(s)</label><div class="vg-multi" id="m-vg-wrap"><div class="vg-multi-display" id="m-vg-display">Unassigned</div><div class="vg-multi-dd" id="m-vg-dd"></div></div></div>
         <div class="fgr"><label class="fl">Status</label><select class="fse" id="m-status"><option>Needs Coverage</option><option>Confirmed</option><option>In Progress</option><option>Delivered</option><option>Paid</option><option>Pending Payment</option><option>Cancelled</option></select></div>
         <div class="fgr"><label class="fl">Pay Amount ($)</label><input class="fi" type="number" id="m-pay" placeholder="0" min="0"></div>
         <div class="fgr full"><label class="fl">Notes</label><textarea class="fta" id="m-notes" placeholder="Additional details..."></textarea></div>
@@ -442,10 +450,18 @@ function dateStr(d){return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.g
 function sameDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate()}
 function timeToMin(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m}
 function jobsOverlap(a,b){if(a.date!==b.date||a.id===b.id)return false;const as=timeToMin(a.startTime),ae=timeToMin(a.endTime),bs=timeToMin(b.startTime),be=timeToMin(b.endTime);return as<be&&bs<ae}
+function getVgList(j){
+  const v=j.assignedVideographer;
+  if(!v||v==='Unassigned')return[];
+  return v.split(',').map(s=>s.trim()).filter(Boolean);
+}
+function hasVg(j,name){return getVgList(j).includes(name)}
+function isUnassigned(j){return getVgList(j).length===0}
 function getConflicts(jobs){
   const conflicts=new Set();
   for(let i=0;i<jobs.length;i++){for(let j=i+1;j<jobs.length;j++){
-    if(jobs[i].assignedVideographer&&jobs[i].assignedVideographer!=='Unassigned'&&jobs[i].assignedVideographer===jobs[j].assignedVideographer&&jobsOverlap(jobs[i],jobs[j])){
+    const shared=getVgList(jobs[i]).filter(v=>getVgList(jobs[j]).includes(v));
+    if(shared.length>0&&jobsOverlap(jobs[i],jobs[j])){
       conflicts.add(jobs[i].id);conflicts.add(jobs[j].id);
     }
   }}
@@ -591,9 +607,9 @@ function initSampleData(){
 
 function getFilteredJobs(){
   let jobs=S.jobs.slice();
-  if(S.filterVg) jobs=jobs.filter(j=>j.assignedVideographer===S.filterVg);
+  if(S.filterVg) jobs=jobs.filter(j=>hasVg(j,S.filterVg));
   if(S.filters.status) jobs=jobs.filter(j=>j.status===S.filters.status);
-  if(S.filters.vg) jobs=jobs.filter(j=>j.assignedVideographer===S.filters.vg);
+  if(S.filters.vg) jobs=jobs.filter(j=>hasVg(j,S.filters.vg));
   if(S.filters.team) jobs=jobs.filter(j=>j.team===S.filters.team);
   if(S.filters.type) jobs=jobs.filter(j=>j.type===S.filters.type);
   return jobs;
@@ -608,7 +624,7 @@ function renderAll(){
   renderFilmstrip();renderStats();renderCoverageAlert();renderRoster();renderFilterDropdowns();renderActiveFilters();renderNavLabel();renderCalendar();
   const banner=$('assign-banner');
   if(S.assignMode){
-    const unassigned=S.jobs.filter(j=>(!j.assignedVideographer||j.assignedVideographer==='Unassigned')&&j.status!=='Cancelled').length;
+    const unassigned=S.jobs.filter(j=>isUnassigned(j)&&j.status!=='Cancelled').length;
     $('assign-text').textContent='🎯 Assign mode: Click unassigned games to assign to '+S.assignMode+' ('+unassigned+' available)';
     banner.classList.add('show');
   } else {
@@ -637,7 +653,7 @@ function renderStats(){
 
 function renderCoverageAlert(){
   const now=new Date(),end=new Date(now);end.setDate(end.getDate()+7);
-  const needs=S.jobs.filter(j=>{const d=new Date(j.date+'T00:00:00');return d>=now&&d<=end&&(j.status==='Needs Coverage'||j.assignedVideographer==='Unassigned')&&j.status!=='Cancelled'});
+  const needs=S.jobs.filter(j=>{const d=new Date(j.date+'T00:00:00');return d>=now&&d<=end&&(j.status==='Needs Coverage'||isUnassigned(j))&&j.status!=='Cancelled'});
   const el=$('cov-alert'),tx=$('cov-text');
   if(needs.length>0){el.classList.add('show');tx.textContent=needs.length+' game'+(needs.length>1?'s':'')+' need'+(needs.length===1?'s':'')+' coverage this week';}
   else el.classList.remove('show');
@@ -648,7 +664,7 @@ function renderRoster(){
   const cf=conflicts();const y=S.currentDate.getFullYear(),m=S.currentDate.getMonth();
   let h='';
   S.videographers.forEach(v=>{
-    const vJobs=S.jobs.filter(j=>{const d=new Date(j.date+'T00:00:00');return d.getFullYear()===y&&d.getMonth()===m&&j.assignedVideographer===v.name&&j.status!=='Cancelled'});
+    const vJobs=S.jobs.filter(j=>{const d=new Date(j.date+'T00:00:00');return d.getFullYear()===y&&d.getMonth()===m&&hasVg(j,v.name)&&j.status!=='Cancelled'});
     const earned=vJobs.filter(j=>j.status==='Paid').reduce((s,j)=>s+(j.payAmount||0),0);
     const total=vJobs.reduce((s,j)=>s+(j.payAmount||0),0);
     const paidC=vJobs.filter(j=>j.status==='Paid').length;
@@ -743,7 +759,7 @@ function renderMonth(el){
     const show=dayJobs.slice(0,3);
     show.forEach(j=>{
       const c=getJobColor(j);const hasCf=cf.has(j.id);
-      const canAssign=S.assignMode&&(!j.assignedVideographer||j.assignedVideographer==='Unassigned')&&j.status!=='Cancelled';
+      const canAssign=S.assignMode&&!hasVg(j,S.assignMode)&&j.status!=='Cancelled';
       h+='<div class="dpill'+(canAssign?' assignable':'')+'" style="background:'+c+'" data-id="'+j.id+'" title="'+(canAssign?'Click to assign '+S.assignMode:((hasCf?'⚠ Schedule conflict\n':'')+j.title))+'">'+(hasCf?'⚠ ':'')+j.title+'</div>';
     });
     if(dayJobs.length>3) h+='<div class="dmore">+'+(dayJobs.length-3)+' more</div>';
@@ -781,7 +797,7 @@ function renderWeek(el){
       const s=timeToMin(j.startTime||'09:00'),e=timeToMin(j.endTime||'11:00');
       const top=((s-360)/60)*48,height=Math.max(((e-s)/60)*48,20);
       const c=getJobColor(j);const hasCf=cf.has(j.id);
-      const canAssign=S.assignMode&&(!j.assignedVideographer||j.assignedVideographer==='Unassigned')&&j.status!=='Cancelled';
+      const canAssign=S.assignMode&&!hasVg(j,S.assignMode)&&j.status!=='Cancelled';
       h+='<div class="wev'+(canAssign?' assignable':'')+'" style="top:'+top+'px;height:'+height+'px;background:'+c+'" data-id="'+j.id+'" title="'+(canAssign?'Click to assign '+S.assignMode:((hasCf?'⚠ Conflict\n':'')+j.title))+'">';
       h+='<div class="wet">'+(hasCf?'⚠ ':'')+j.title+'</div>';
       h+='<div class="weti">'+fmtTime(j.startTime)+' – '+fmtTime(j.endTime)+'</div></div>';
@@ -815,7 +831,7 @@ function renderList(el){
       h+='<span class="jcmi">🕐 '+fmtTime(j.startTime)+' – '+fmtTime(j.endTime)+'</span>';
       if(j.team) h+='<span class="jcmi">🏈 '+j.team+'</span>';
       h+='<span class="jcmi">🎬 '+j.type+'</span>';
-      if(j.assignedVideographer&&j.assignedVideographer!=='Unassigned') h+='<span class="jcmi">👤 '+j.assignedVideographer+'</span>';
+      if(!isUnassigned(j)) h+='<span class="jcmi">👤 '+getVgList(j).join(', ')+'</span>';
       h+='</div>';
       h+=renderPaymentTimeline(j);
       h+='</div><div class="jcr">';
@@ -847,7 +863,7 @@ function openNewModal(date){
   $('m-start').value='09:00';$('m-end').value='11:00';
   $('m-type').value='Game Coverage';$('m-team').value='';
   $('m-status').value='Needs Coverage';$('m-pay').value='';$('m-notes').value='';
-  populateVgSelect();$('m-vg').value='Unassigned';
+  populateVgSelect([]);
   $('mdl-del').style.display='none';
   clearFormErrors();
   $('mo').classList.add('open');
@@ -861,7 +877,7 @@ function openEditModal(id){
   $('m-start').value=j.startTime||'09:00';$('m-end').value=j.endTime||'11:00';
   $('m-type').value=j.type;$('m-team').value=j.team||'';
   $('m-status').value=j.status;$('m-pay').value=j.payAmount||'';$('m-notes').value=j.notes||'';
-  populateVgSelect();$('m-vg').value=j.assignedVideographer||'Unassigned';
+  populateVgSelect(getVgList(j));
   $('mdl-del').style.display='inline-flex';
   clearFormErrors();
   $('mo').classList.add('open');
@@ -869,16 +885,39 @@ function openEditModal(id){
 
 function closeModal(){$('mo').classList.remove('open');S.editingJobId=null}
 
-function populateVgSelect(){
-  let h='<option value="Unassigned">Unassigned</option>';
-  S.videographers.forEach(v=>h+='<option value="'+v.name+'">'+v.name+'</option>');
-  $('m-vg').innerHTML=h;
+function populateVgSelect(selected){
+  const sel=selected||[];
+  let h='';
+  S.videographers.forEach(v=>{
+    const checked=sel.includes(v.name)?'checked':'';
+    h+='<label><input type="checkbox" value="'+v.name+'" '+checked+'> '+v.name+'</label>';
+  });
+  $('m-vg-dd').innerHTML=h;
+  updateVgDisplay();
+  $('m-vg-dd').querySelectorAll('input').forEach(cb=>cb.addEventListener('change',()=>{
+    updateVgDisplay();
+    // Auto-set status
+    const names=getSelectedVgs();
+    const status=$('m-status').value;
+    if(names.length>0&&status==='Needs Coverage') $('m-status').value='Pending Payment';
+    else if(names.length===0&&status==='Pending Payment') $('m-status').value='Needs Coverage';
+  }));
+}
+function getSelectedVgs(){
+  return [...$('m-vg-dd').querySelectorAll('input:checked')].map(cb=>cb.value);
+}
+function updateVgDisplay(){
+  const names=getSelectedVgs();
+  $('m-vg-display').textContent=names.length?names.join(', '):'Unassigned';
+  $('m-vg-display').style.color=names.length?'var(--text)':'var(--text3)';
 }
 
 async function assignVgToJob(jobId,vgName){
   const idx=S.jobs.findIndex(j=>j.id===jobId);
   if(idx<0)return;
-  S.jobs[idx].assignedVideographer=vgName;
+  const existing=getVgList(S.jobs[idx]);
+  if(!existing.includes(vgName)) existing.push(vgName);
+  S.jobs[idx].assignedVideographer=existing.join(', ');
   if(S.jobs[idx].status==='Needs Coverage') S.jobs[idx].status='Pending Payment';
   await saveJob(S.jobs[idx]);
   renderAll();
@@ -901,7 +940,7 @@ async function saveJobModal(){
     title,date,
     startTime:$('m-start').value,endTime:$('m-end').value,
     type:$('m-type').value,team:$('m-team').value.trim(),
-    assignedVideographer:$('m-vg').value,
+    assignedVideographer:getSelectedVgs().join(', ')||'Unassigned',
     status:$('m-status').value,
     payAmount:parseFloat($('m-pay').value)||0,
     notes:$('m-notes').value.trim(),
@@ -946,7 +985,7 @@ function openDayPanel(ds){
     h+='<div class="dpj" style="border-left-color:'+c+'" data-id="'+j.id+'">';
     h+='<div class="dpjt">'+j.title+'</div>';
     h+='<div class="dpjm">'+fmtTime(j.startTime)+' – '+fmtTime(j.endTime);
-    if(j.assignedVideographer&&j.assignedVideographer!=='Unassigned') h+=' · '+j.assignedVideographer;
+    if(!isUnassigned(j)) h+=' · '+getVgList(j).join(', ');
     h+='</div><div class="dpjm" style="margin-top:3px"><span class="sbadge" style="background:'+STATUS_DIM[j.status]+';color:'+STATUS_COLORS[j.status]+'">'+j.status+'</span></div>';
     h+='</div>';
   });
@@ -988,7 +1027,7 @@ function exportCSV(){
   const headers=['Title','Date','Start','End','Type','Team','Videographer','Status','Pay','Notes'];
   let csv=headers.join(',')+'\n';
   S.jobs.forEach(j=>{
-    csv+=[j.title,j.date,j.startTime,j.endTime,j.type,j.team||'',j.assignedVideographer||'',j.status,j.payAmount||0,'"'+(j.notes||'').replace(/"/g,'""')+'"'].join(',')+'\n';
+    csv+=[j.title,j.date,j.startTime,j.endTime,j.type,j.team||'','"'+(j.assignedVideographer||'')+'"',j.status,j.payAmount||0,'"'+(j.notes||'').replace(/"/g,'""')+'"'].join(',')+'\n';
   });
   const blob=new Blob([csv],{type:'text/csv'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='lax_jobs_export.csv';a.click();
@@ -1338,15 +1377,12 @@ async function init(){
   $('mdl-del').addEventListener('click',deleteJob);
   $('mo').addEventListener('click',e=>{if(e.target===$('mo'))closeModal()});
 
-  // Auto-set status when VG is assigned in modal
-  $('m-vg').addEventListener('change',()=>{
-    const vg=$('m-vg').value;
-    const status=$('m-status').value;
-    if(vg&&vg!=='Unassigned'&&status==='Needs Coverage'){
-      $('m-status').value='Pending Payment';
-    } else if(vg==='Unassigned'&&status==='Pending Payment'){
-      $('m-status').value='Needs Coverage';
-    }
+  // Multi-VG dropdown toggle
+  $('m-vg-display').addEventListener('click',()=>{
+    $('m-vg-dd').classList.toggle('open');
+  });
+  document.addEventListener('click',e=>{
+    if(!$('m-vg-wrap').contains(e.target)) $('m-vg-dd').classList.remove('open');
   });
 
   // Assign mode exit

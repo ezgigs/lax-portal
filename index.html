@@ -246,6 +246,7 @@ h1,h2,h3,h4,h5{font-family:'Space Grotesk',sans-serif}button{cursor:pointer;font
       <div class="hdr-actions">
         <button class="btn btn-g btn-sm" id="btn-exp" title="Export CSV">⬇ Export</button>
         <button class="btn btn-g btn-sm" id="btn-undo" title="Undo last import" style="display:none;color:var(--amber);border-color:rgba(137,180,250,.3)">↩ Undo Import</button>
+        <button class="btn btn-g btn-sm" id="btn-reset" title="Clear all jobs" style="color:var(--red);border-color:rgba(243,139,168,.3)">🗑 Reset</button>
         <button class="btn btn-g btn-sm" id="btn-paste" title="Paste Schedule">📋 Paste Schedule</button>
         <button class="btn btn-g btn-sm" id="notif-btn" title="Notes &amp; Notifications">🔔 Notes <div class="notif-dot"></div></button>
         <button class="btn btn-p" id="btn-new" title="New Job (N)">＋ New Job</button>
@@ -1477,6 +1478,7 @@ async function init(){
   // Export
   $('btn-exp').addEventListener('click',exportCSV);
   $('btn-undo').addEventListener('click',undoLastImport);
+  $('btn-reset').addEventListener('click',resetCalendar);
 
   // Mass controls init
   initMassControls();

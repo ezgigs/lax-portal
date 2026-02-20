@@ -1072,14 +1072,44 @@ function parseScheduleLine(line, fallbackYear){
   line=line.replace(/^[-•*]\s*/,'').trim();
   if(!line||line.length<5)return null;
 
-  // Extract date: look for M/D or M-D patterns
-  const dateRx=/\b(\d{1,2})[\/\-](\d{1,2})\b/;
-  const dateM=line.match(dateRx);
-  if(!dateM)return null;
-  const month=parseInt(dateM[1]),day=parseInt(dateM[2]);
-  if(month<1||month>12||day<1||day>31)return null;
+  const MONTHS={jan:1,january:1,feb:2,february:2,mar:3,march:3,apr:4,april:4,may:5,jun:6,june:6,jul:7,july:7,aug:8,august:8,sep:9,sept:9,september:9,oct:10,october:10,nov:11,november:11,dec:12,december:12};
   const year=parseInt(fallbackYear)||new Date().getFullYear();
-  const dateVal=year+'-'+pad2(month)+'-'+pad2(day);
+  let month=0,day=0,dateVal='',dateMatchStr='';
+
+  // Try YYYY-MM-DD
+  const isoRx=/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/;
+  const isoM=line.match(isoRx);
+  // Try MM/DD/YYYY
+  const fullRx=/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b/;
+  const fullM=line.match(fullRx);
+  // Try text date: "June 14", "Jun 15th", "June 14, 2025"
+  const textRx=/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*,?\s*(\d{4}))?\b/i;
+  const textM=line.match(textRx);
+  // Try numeric M/D
+  const numRx=/\b(\d{1,2})[\/\-](\d{1,2})\b/;
+  const numM=line.match(numRx);
+
+  if(isoM){
+    month=parseInt(isoM[2]);day=parseInt(isoM[3]);
+    dateVal=isoM[1]+'-'+pad2(month)+'-'+pad2(day);
+    dateMatchStr=isoM[0];
+  } else if(fullM){
+    month=parseInt(fullM[1]);day=parseInt(fullM[2]);
+    dateVal=fullM[3]+'-'+pad2(month)+'-'+pad2(day);
+    dateMatchStr=fullM[0];
+  } else if(textM){
+    const mKey=textM[1].toLowerCase().replace(/\.$/,'');
+    month=MONTHS[mKey]||0;day=parseInt(textM[2]);
+    const yr=textM[3]?parseInt(textM[3]):year;
+    if(month&&day) dateVal=yr+'-'+pad2(month)+'-'+pad2(day);
+    dateMatchStr=textM[0];
+  } else if(numM){
+    month=parseInt(numM[1]);day=parseInt(numM[2]);
+    dateVal=year+'-'+pad2(month)+'-'+pad2(day);
+    dateMatchStr=numM[0];
+  }
+
+  if(!dateVal||month<1||month>12||day<1||day>31)return null;
 
   // Extract time
   const timeRx=/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm))/i;
@@ -1091,12 +1121,12 @@ function parseScheduleLine(line, fallbackYear){
   // Remove day-of-week prefix
   title=title.replace(/^(monday|tuesday|wednesday|thursday|friday|saturday|sunday),?\s*/i,'');
   // Remove date portion
-  title=title.replace(dateRx,'');
+  if(dateMatchStr) title=title.replace(dateMatchStr,'');
   // Remove time portion
   title=title.replace(/[-–]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*/i,'');
   title=title.replace(/\bat\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*/i,'');
-  // Remove leading dashes/spaces
-  title=title.replace(/^[-–\s,]+/,'').replace(/[-–\s,]+$/,'').trim();
+  // Remove leading dashes/spaces/commas
+  title=title.replace(/^[-–\s,@]+/,'').replace(/[-–\s,]+$/,'').trim();
   // Capitalize first letter
   if(title) title=title.charAt(0).toUpperCase()+title.slice(1);
   if(!title) title='Game '+fmtDate(dateVal);

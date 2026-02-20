@@ -245,7 +245,7 @@ h1,h2,h3,h4,h5{font-family:'Space Grotesk',sans-serif}button{cursor:pointer;font
       <div class="hdr-brand"></div>
       <div class="hdr-actions">
         <button class="btn btn-g btn-sm" id="btn-exp" title="Export CSV">⬇ Export</button>
-        <button class="btn btn-g btn-sm" id="btn-reset" title="Clear all jobs" style="color:var(--red);border-color:rgba(243,139,168,.3)">🗑 Reset</button>
+        <button class="btn btn-g btn-sm" id="btn-undo" title="Undo last import" style="display:none;color:var(--amber);border-color:rgba(137,180,250,.3)">↩ Undo Import</button>
         <button class="btn btn-g btn-sm" id="btn-paste" title="Paste Schedule">📋 Paste Schedule</button>
         <button class="btn btn-g btn-sm" id="notif-btn" title="Notes &amp; Notifications">🔔 Notes <div class="notif-dot"></div></button>
         <button class="btn btn-p" id="btn-new" title="New Job (N)">＋ New Job</button>
@@ -479,7 +479,8 @@ let S = {
   selectedDay:null,
   filterVg:null,
   notifications:[],
-  assignMode:null
+  assignMode:null,
+  lastImportIds:[]
 };
 
 /* ===== SUPABASE ===== */
@@ -1072,9 +1073,27 @@ function parseScheduleLine(line, fallbackYear){
   line=line.replace(/^[-•*]\s*/,'').trim();
   if(!line||line.length<5)return null;
 
-  const MONTHS={jan:1,january:1,feb:2,february:2,mar:3,march:3,apr:4,april:4,may:5,jun:6,june:6,jul:7,july:7,aug:8,august:8,sep:9,sept:9,september:9,oct:10,october:10,nov:11,november:11,dec:12,december:12};
+  const MN={jan:1,january:1,feb:2,february:2,mar:3,march:3,apr:4,april:4,may:5,jun:6,june:6,jul:7,july:7,aug:8,august:8,sep:9,sept:9,september:9,oct:10,october:10,nov:11,november:11,dec:12,december:12};
+  const mPat='(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
   const year=parseInt(fallbackYear)||new Date().getFullYear();
-  let month=0,day=0,dateVal='',dateMatchStr='';
+
+  function parseMon(s){return MN[s.toLowerCase().replace(/\.$/,'')]||0}
+  function makeDateVal(y,m,d){return y+'-'+pad2(m)+'-'+pad2(d)}
+  function expandRange(startDate,endDate){
+    const dates=[];const cur=new Date(startDate+'T00:00:00');const last=new Date(endDate+'T00:00:00');
+    if(isNaN(cur)||isNaN(last)||last<cur||last-cur>30*86400000)return[startDate];
+    while(cur<=last){dates.push(dateStr(cur));cur.setDate(cur.getDate()+1);}
+    return dates;
+  }
+
+  let month=0,day=0,endDay=0,endMonth=0,dateVal='',endDateVal='',dateMatchStr='';
+
+  // Range: "June 10-12", "June 10th-12th", "Jun 10 - Jun 14", "June 10-June 14"
+  const rangeTextRx=new RegExp('\\b('+mPat+')\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*[-–]\\s*(?:('+mPat+')\\s+)?(\\d{1,2})(?:st|nd|rd|th)?(?:\\s*,?\\s*(\\d{4}))?\\b','i');
+  const rangeTextM=line.match(rangeTextRx);
+  // Range: "6/10-6/12", "6/10-12"
+  const rangeNumRx=/\b(\d{1,2})[\/](\d{1,2})\s*[-–]\s*(?:(\d{1,2})[\/])?(\d{1,2})\b/;
+  const rangeNumM=line.match(rangeNumRx);
 
   // Try YYYY-MM-DD
   const isoRx=/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/;
@@ -1083,13 +1102,28 @@ function parseScheduleLine(line, fallbackYear){
   const fullRx=/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b/;
   const fullM=line.match(fullRx);
   // Try text date: "June 14", "Jun 15th", "June 14, 2025"
-  const textRx=/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*,?\s*(\d{4}))?\b/i;
+  const textRx=new RegExp('\\b('+mPat+')\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:\\s*,?\\s*(\\d{4}))?\\b','i');
   const textM=line.match(textRx);
   // Try numeric M/D
   const numRx=/\b(\d{1,2})[\/\-](\d{1,2})\b/;
   const numM=line.match(numRx);
 
-  if(isoM){
+  if(rangeTextM){
+    month=parseMon(rangeTextM[1]);day=parseInt(rangeTextM[2]);
+    endMonth=rangeTextM[3]?parseMon(rangeTextM[3]):month;
+    endDay=parseInt(rangeTextM[4]);
+    const yr=rangeTextM[5]?parseInt(rangeTextM[5]):year;
+    dateVal=makeDateVal(yr,month,day);
+    endDateVal=makeDateVal(yr,endMonth,endDay);
+    dateMatchStr=rangeTextM[0];
+  } else if(rangeNumM){
+    month=parseInt(rangeNumM[1]);day=parseInt(rangeNumM[2]);
+    endMonth=rangeNumM[3]?parseInt(rangeNumM[3]):month;
+    endDay=parseInt(rangeNumM[4]);
+    dateVal=makeDateVal(year,month,day);
+    endDateVal=makeDateVal(year,endMonth,endDay);
+    dateMatchStr=rangeNumM[0];
+  } else if(isoM){
     month=parseInt(isoM[2]);day=parseInt(isoM[3]);
     dateVal=isoM[1]+'-'+pad2(month)+'-'+pad2(day);
     dateMatchStr=isoM[0];
@@ -1098,14 +1132,13 @@ function parseScheduleLine(line, fallbackYear){
     dateVal=fullM[3]+'-'+pad2(month)+'-'+pad2(day);
     dateMatchStr=fullM[0];
   } else if(textM){
-    const mKey=textM[1].toLowerCase().replace(/\.$/,'');
-    month=MONTHS[mKey]||0;day=parseInt(textM[2]);
+    month=parseMon(textM[1]);day=parseInt(textM[2]);
     const yr=textM[3]?parseInt(textM[3]):year;
-    if(month&&day) dateVal=yr+'-'+pad2(month)+'-'+pad2(day);
+    if(month&&day) dateVal=makeDateVal(yr,month,day);
     dateMatchStr=textM[0];
   } else if(numM){
     month=parseInt(numM[1]);day=parseInt(numM[2]);
-    dateVal=year+'-'+pad2(month)+'-'+pad2(day);
+    dateVal=makeDateVal(year,month,day);
     dateMatchStr=numM[0];
   }
 
@@ -1116,22 +1149,21 @@ function parseScheduleLine(line, fallbackYear){
   const timeM=line.match(timeRx);
   const {start,end}=parseTime(timeM?timeM[1]:'');
 
-  // Extract title: everything after the date/time info
+  // Extract title
   let title=line;
-  // Remove day-of-week prefix
   title=title.replace(/^(monday|tuesday|wednesday|thursday|friday|saturday|sunday),?\s*/i,'');
-  // Remove date portion
   if(dateMatchStr) title=title.replace(dateMatchStr,'');
-  // Remove time portion
   title=title.replace(/[-–]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*/i,'');
   title=title.replace(/\bat\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*/i,'');
-  // Remove leading dashes/spaces/commas
   title=title.replace(/^[-–\s,@]+/,'').replace(/[-–\s,]+$/,'').trim();
-  // Capitalize first letter
   if(title) title=title.charAt(0).toUpperCase()+title.slice(1);
-  if(!title) title='Game '+fmtDate(dateVal);
 
-  return{title,date:dateVal,startTime:start,endTime:end,type:'Game Coverage'};
+  // Expand date range into multiple results
+  const dates=endDateVal?expandRange(dateVal,endDateVal):[dateVal];
+  return dates.map((d,i)=>{
+    const dayTitle=title||(dates.length>1?'Day '+(i+1)+' – '+fmtDate(d):'Game '+fmtDate(d));
+    return{title:dates.length>1?(title?title+' (Day '+(i+1)+')':dayTitle):title||'Game '+fmtDate(d),date:d,startTime:start,endTime:end,type:'Game Coverage'};
+  });
 }
 
 const AVAIL_OPTIONS=[
@@ -1244,7 +1276,7 @@ function parseSchedule(){
   const results=[];
   lines.forEach(line=>{
     const r=parseScheduleLine(line,year);
-    if(r)results.push(r);
+    if(r) results.push(...r);
   });
   const tbody=$('parse-tbody');
   if(!results.length){
@@ -1307,7 +1339,7 @@ const AVAIL_NOTE_MAP={
 async function importParsed(){
   const team=$('p-team').value.trim();
   const rows=$('parse-tbody').querySelectorAll('tr');
-  let count=0;
+  const importedIds=[];
   rows.forEach(row=>{
     const get=f=>row.querySelector('[data-field="'+f+'"]');
     const titleEl=get('title'),dateEl=get('date');
@@ -1324,21 +1356,36 @@ async function importParsed(){
     const type=typeEl?typeEl.value:'Game Coverage';
     const vgEl=get('vg');
     const vg=vgEl?vgEl.value:'Unassigned';
+    const jobId=uid();
+    importedIds.push(jobId);
     S.jobs.push({
-      id:uid(),title,date,
+      id:jobId,title,date,
       startTime:get('startTime').value,endTime:get('endTime').value,
       type,team:team,
       assignedVideographer:vg,
       status,
       payAmount:0,notes,colorTag
     });
-    count++;
   });
-  for(const j of S.jobs.slice(-count)){await saveJob(j);}
-  $('import-status').textContent='✓ '+count+' jobs imported!';
+  for(const j of S.jobs.slice(-importedIds.length)){await saveJob(j);}
+  S.lastImportIds=importedIds;
+  $('btn-undo').style.display=importedIds.length?'inline-flex':'none';
+  $('import-status').textContent='✓ '+importedIds.length+' jobs imported!';
   $('import-status').style.color='var(--green)';
   $('btn-import').style.display='none';
   setTimeout(()=>{closePasteModal();renderAll();},900);
+}
+
+async function undoLastImport(){
+  if(!S.lastImportIds.length)return;
+  if(!confirm('Undo last import? This will remove '+S.lastImportIds.length+' jobs.'))return;
+  for(const id of S.lastImportIds){
+    await deleteJobFromDB(id);
+    S.jobs=S.jobs.filter(j=>j.id!==id);
+  }
+  S.lastImportIds=[];
+  $('btn-undo').style.display='none';
+  renderAll();
 }
 
 function navigate(dir){
@@ -1429,7 +1476,7 @@ async function init(){
 
   // Export
   $('btn-exp').addEventListener('click',exportCSV);
-  $('btn-reset').addEventListener('click',resetCalendar);
+  $('btn-undo').addEventListener('click',undoLastImport);
 
   // Mass controls init
   initMassControls();
